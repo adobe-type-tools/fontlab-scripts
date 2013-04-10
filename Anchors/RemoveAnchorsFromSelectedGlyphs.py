@@ -1,7 +1,7 @@
-#FLM: Remove Anchors
+#FLM: Remove Anchors From Selected Glyphs
 
 __copyright__ = __license__ =  """
-Copyright (c) 2010-2012 Adobe Systems Incorporated. All rights reserved.
+Copyright (c) 2010-2013 Adobe Systems Incorporated. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Remove Anchors v1.1 - Jun 15 2012
+Remove Anchors From Selected Glyphs v1.2 - Apr 10 2013
 
 Removes the anchors on the selected glyphs.
 
@@ -30,6 +30,7 @@ Removes the anchors on the selected glyphs.
 Versions:
 v1.0   - Apr 29 2010 - Initial version.
 v1.1   - Jun 15 2012 - Added undo support.
+v1.2   - Apr 10 2013 - Remaned the macro from "Remove Anchors" to the current name.
 
 """
 
