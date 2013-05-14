@@ -3,8 +3,9 @@ import os
 moduleFound = False
 
 try:
+    import kernExport
     from kernExport import *
-    reload(kernExport)
+    # reload(kernExport)
     moduleFound = True
 
 except ImportError:
