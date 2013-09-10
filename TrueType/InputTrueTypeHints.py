@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Input TrueType Hints v1.0 - Jan 07 2013
+Input TrueType Hints v1.1 - Sep 07 2013
 
 This FontLab macro will read an external simple text file containing
 TrueType instructions for each glyph, and will apply that data to the
@@ -33,6 +33,7 @@ named "Output TrueType Hints".
 ==================================================
 Versions:
 v1.0 - Jan 07 2013 - Initial release
+v1.1 - Sep 07 2013 - Enabled the reading of 'tthints' files with an optional column for glyph color mark
 """
 
 #----------------------------------------
@@ -86,11 +87,15 @@ def applyTTHints(ttHintsList):
 	for item in ttHintsList:
 		hintItems = item.split("\t")
 		
-		if len(hintItems) != 2:
+		if len(hintItems) == 3:
+			gName, gHints, gMark = hintItems
+			gMark = int(gMark)
+		elif len(hintItems) == 2:
+			gName, gHints = hintItems
+			gMark = 80 # Green color
+		else:
 			print "ERROR: This hint definition does not have the correct format\n\t%s" % item
 			continue
-		
-		gName, gHints = hintItems
 
 		gIndex = fl.font.FindGlyph(gName)
 		
@@ -171,7 +176,7 @@ def applyTTHints(ttHintsList):
 		
 		if len(tth.commands):
 			tth.SaveProgram(glyph)
-			glyph.mark = 80 # Green color
+			glyph.mark = gMark
 			fl.UpdateGlyph(gIndex)
 			glyphsHinted += 1
 	
