@@ -1,7 +1,7 @@
 #FLM: Output TrueType Hints
 
 __copyright__ = __license__ =  """
-Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
+Copyright (c) 2013, 2015 Adobe Systems Incorporated. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"), 
@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Output TrueType Hints v1.0 - Jan 07 2013
+Output TrueType Hints v1.1 - Mar 04 2015
 
 This FontLab macro will write an external simple text file containing
 TrueType instructions for each selected glyph. If the external file
@@ -31,9 +31,14 @@ already exists, the script will replace the existing entries and add
 new ones. The hinting data can be loaded back into the font by using
 the macro named "Input TrueType Hints".
 
+The script will emit an error if there are hints attached to off-curve
+points. That's the only difference from OutputTrueTypeHints.py.
+
 ==================================================
 Versions:
-v1.0 - Jan 07 2013 - Initial release
+v1.1 - Mar 04 2015 – change name to Output TrueType Hints to supersede 
+	   the old script of the same name.
+v1.0 - Nov 27 2013 - Initial release
 """
 
 #----------------------------------------
@@ -44,6 +49,12 @@ kTTHintsFileName = "tthints"
 
 import os
 
+kAlignLinkTop = '1'
+kAlignLinkBottom = '2'
+kAlignLinkNear = '8'
+kSingleLink = '4'
+kDoubleLink = '6'
+kInterpolateLink = '14'
 
 listGlyphsSelected = []
 def getgselectedglyphs(font, glyph, gindex):
@@ -101,6 +112,33 @@ def processTTHintsFileData(ttHintsList):
 	return ttHintsDict
 	
 
+def checkForOffCurve(commands, gName):
+	gIndex = fl.font.FindGlyph(gName)
+	
+	hintValuesList = commands.split(',')
+	
+	if hintValuesList[0] in [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
+		nodeIndexList = [int(hintValuesList[1])]
+	elif hintValuesList[0] in [kSingleLink, kDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
+		nodeIndexList = [int(x) for x in hintValuesList[1:3]]
+	elif hintValuesList[0] == kInterpolateLink: # the instruction is an Interpolation Link, so three nodes are provided
+		nodeIndexList = [int(x) for x in hintValuesList[1:4]]
+	else:
+		print "ERROR: Hint type not supported in %s." % gName
+		nodeIndexList = []
+	
+	for hintedNodeIndex in nodeIndexList:
+		node = fl.font[gIndex][hintedNodeIndex]
+		try:
+			node.type
+		except:
+			print "ERROR: Hinting problem in glyph %s." % gName
+			continue
+
+		if node.type == nOFF:
+			print "ERROR: Hinted off-curve point #%d in glyph %s." % (hintedNodeIndex, gName)
+
+
 def collectInstructions(tth, gName):
 	commandsList = []
 	for inst in tth.commands:
@@ -109,6 +147,7 @@ def collectInstructions(tth, gName):
 			params += "%d," % p
 		command = "%d,%s" % (inst.code, params[:-1]) # trim last comma
 		commandsList.append(command)
+		checkForOffCurve(command, gName)
 	return commandsList
 
 
