@@ -1,7 +1,32 @@
-# coding: utf-8
 #FLM: TT Hints Duplicator
+# coding: utf-8
 
-__usage__ = '''
+__copyright__ = __license__ =  """
+
+Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
+ 
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"), 
+to deal in the Software without restriction, including without limitation 
+the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+and/or sell copies of the Software, and to permit persons to whom the 
+Software is furnished to do so, subject to the following conditions:
+ 
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+DEALINGS IN THE SOFTWARE.
+
+"""
+
+
+__doc__ = u'''
 
 DESCRIPTION:
 ------------
@@ -49,7 +74,7 @@ are expected:
       and exporting the hints with e.g. OutputTrueTypeHintsPlus.py
 
 
-An example tree could look like this – in this case, the source files are UFOs,
+An example tree could look like this - in this case, the source files are UFOs,
 and the Regular style has been hinted by hand (in the VFB file). Then, a `tthints`
 file has been exported from the Regular:
 
@@ -123,31 +148,6 @@ of the code just resulted in horrible crashes and (no kidding) kernel panics.
 '''
 
 
-__copyright__ = __license__ =  """
-
-Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
- 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"), 
-to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit persons to whom the 
-Software is furnished to do so, subject to the following conditions:
- 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
-DEALINGS IN THE SOFTWARE.
-
-"""
-
-
 import sys
 import os
 import time
@@ -174,12 +174,18 @@ if MAC:
 
 
 # numerical identifiers for different kinds of hints 
-kAlignLinkTop    = '1'
-kAlignLinkBottom = '2'
-kAlignLinkNear   = '8'
-kSingleLink      = '4'
-kDoubleLink      = '6'
-kInterpolateLink = '14'
+vAlignLinkTop    = '1'
+vAlignLinkBottom = '2'
+vAlignLinkNear   = '8'
+vSingleLink      = '4'
+vDoubleLink      = '6'
+vInterpolateLink = '14'
+
+hAlignLinkNear = '7'
+hSingleLink = '3'
+hDoubleLink = '5'
+hInterpolateLink = '13'
+
 
 kTTFFileName = "font.ttf"
 kPFAFileName = "font.pfa"
@@ -360,11 +366,11 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
         for gHint in gHintsList:
             hintValuesList = gHint.split(',')
             if len(hintValuesList):
-                if hintValuesList[0] in [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
+                if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
                     nodeIndexList = [int(hintValuesList[1])]
-                elif hintValuesList[0] in [kSingleLink, kDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
+                elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
                     nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-                elif hintValuesList[0] == kInterpolateLink: # the instruction is an Interpolation Link, so three nodes are provided
+                elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
                     nodeIndexList = [int(x) for x in hintValuesList[1:4]]
                 else:
                     print "Hint type not supported (%s : %s). Skipping..." % (gName, gHint)
@@ -501,17 +507,17 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
                 hintValuesList = gHint.split(',')
                 if len(hintValuesList):
                     newHint.append(hintValuesList[0])
-                    if hintValuesList[0] in [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
+                    if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
                         nodeIndexList = [int(hintValuesList[1])]
                         targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
                         hintParamsList = hintValuesList[2:]
                     
-                    elif hintValuesList[0] in [kSingleLink, kDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
+                    elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
                         nodeIndexList = [int(x) for x in hintValuesList[1:3]]
                         targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
                         hintParamsList = hintValuesList[3:]
                     
-                    elif hintValuesList[0] == kInterpolateLink: # the instruction is an Interpolation Link, so three nodes are provided
+                    elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
                         nodeIndexList = [int(x) for x in hintValuesList[1:4]]
                         targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
                         hintParamsList = hintValuesList[4:]

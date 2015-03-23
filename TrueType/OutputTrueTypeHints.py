@@ -1,4 +1,5 @@
 #FLM: Output TrueType Hints
+# coding: utf-8
 
 __copyright__ = __license__ =  """
 Copyright (c) 2013, 2015 Adobe Systems Incorporated. All rights reserved.
@@ -36,6 +37,7 @@ points. That's the only difference from OutputTrueTypeHints.py.
 
 ==================================================
 Versions:
+v1.2 - Mar 23 2015 – Allow instructions in x-direction.
 v1.1 - Mar 04 2015 – change name to Output TrueType Hints to supersede 
 	   the old script of the same name.
 v1.0 - Nov 27 2013 - Initial release
@@ -48,13 +50,26 @@ kTTHintsFileName = "tthints"
 #----------------------------------------
 
 import os
+from FL import *
 
-kAlignLinkTop = '1'
-kAlignLinkBottom = '2'
-kAlignLinkNear = '8'
-kSingleLink = '4'
-kDoubleLink = '6'
-kInterpolateLink = '14'
+vAlignLinkTop = '1'
+vAlignLinkBottom = '2'
+vAlignLinkNear = '8'
+vSingleLink = '4'
+vDoubleLink = '6'
+vInterpolateLink = '14'
+
+vMidDelta = '21'
+vFinDelta = '23'
+
+hAlignLinkNear = '7'
+hSingleLink = '3'
+hDoubleLink = '5'
+hInterpolateLink = '13'
+
+hMidDelta = '20'
+hFinDelta = '22'
+
 
 listGlyphsSelected = []
 def getgselectedglyphs(font, glyph, gindex):
@@ -117,14 +132,18 @@ def checkForOffCurve(commands, gName):
 	
 	hintValuesList = commands.split(',')
 	
-	if hintValuesList[0] in [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
+	if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
 		nodeIndexList = [int(hintValuesList[1])]
-	elif hintValuesList[0] in [kSingleLink, kDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
+	elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
 		nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-	elif hintValuesList[0] == kInterpolateLink: # the instruction is an Interpolation Link, so three nodes are provided
+	elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
 		nodeIndexList = [int(x) for x in hintValuesList[1:4]]
 	else:
-		print "ERROR: Hint type not supported in %s." % gName
+		if hintValuesList[0] in [vMidDelta, vFinDelta, hMidDelta, hFinDelta]:
+			print 'NOTE: Ignoring Delta hint in %s.' % gName
+		else:
+			print "ERROR: Hint type not supported in %s." % gName
+		
 		nodeIndexList = []
 	
 	for hintedNodeIndex in nodeIndexList:

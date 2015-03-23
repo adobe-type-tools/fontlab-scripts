@@ -1,11 +1,44 @@
 #FLM: Convert PFA/UFO/TXT to TTF/VFB
+# coding: utf-8
 
+__copyright__ = __license__ =  """
+Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
+ 
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"), 
+to deal in the Software without restriction, including without limitation 
+the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+and/or sell copies of the Software, and to permit persons to whom the 
+Software is furnished to do so, subject to the following conditions:
+ 
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+DEALINGS IN THE SOFTWARE.
 """
-This script will convert one or more hinted PFA/UFO/or TXT files into TTF files, for use as input for MakeOTF.
+
+__doc__ = """
+
+This FontLab script will convert one or more hinted PFA/UFO or TXT files into TTF files, for use 
+as input for makeOTF.
 The script will first ask for a directory, which usually should be the family's top-most folder.
 It will then crawl through that folder and process all input files it finds.
 In addition to the directory, the script will also ask for an encoding file. This encoding file
 is a FontLab '.enc' file which the script will use for ordering the glyphs.
+
+==================================================
+
+Versions:
+
+v1.1 - Mar 23 2015 - Allow instructions in x-direction.
+v1.0 - Mar 04 2015 - Initial public release (Robothon 2015).
+
 """
 
 import os
@@ -48,12 +81,19 @@ kFontTXT = "font.txt"
 kFontUFO = "font.ufo"
 kFontTTF = "font.ttf"
 
-kAlignLinkTop    = '1'
-kAlignLinkBottom = '2'
-kAlignLinkNear   = '8'
-kSingleLink      = '4'
-kDoubleLink      = '6'
-kInterpolateLink = '14'
+vAlignLinkTop    = '1'
+vAlignLinkBottom = '2'
+vAlignLinkNear   = '8'
+vSingleLink      = '4'
+vDoubleLink      = '6'
+vInterpolateLink = '14'
+
+hAlignLinkNear = '7'
+hSingleLink = '3'
+hDoubleLink = '5'
+hInterpolateLink = '13'
+
+
 
 # find-replace text for TTX
 kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
@@ -266,11 +306,11 @@ def checkForOffCurve(commands, gName):
     
     hintValuesList = commands.split(',')
     
-    if hintValuesList[0] in [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
+    if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
         nodeIndexList = [int(hintValuesList[1])]
-    elif hintValuesList[0] in [kSingleLink, kDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
+    elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
         nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-    elif hintValuesList[0] == kInterpolateLink: # the instruction is an Interpolation Link, so three nodes are provided
+    elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
         nodeIndexList = [int(x) for x in hintValuesList[1:4]]
     else:
         print "\t===> ERROR: Hint type not supported in %s. <===" % gName

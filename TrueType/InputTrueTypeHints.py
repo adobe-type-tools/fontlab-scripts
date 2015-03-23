@@ -32,8 +32,10 @@ named "Output TrueType Hints".
 
 ==================================================
 Versions:
-v1.0 - Jan 07 2013 - Initial release
+
+v1.2 - Mar 23 2015 - Enable instructions in x-direction
 v1.1 - Sep 07 2013 - Enabled the reading of 'tthints' files with an optional column for glyph color mark
+v1.0 - Jan 07 2013 - Initial release
 """
 
 #----------------------------------------
@@ -43,20 +45,27 @@ debugMode = False
 
 #----------------------------------------
 
-kAlignLinkTop = 1
-kAlignLinkBottom = 2
-kAlignLinkNearY = 8
-kSingleLinkY = 4
-kDoubleLinkY = 6
-kInterpolateLink = 14
+vAlignLinkTop = 1
+vAlignLinkBottom = 2
+vAlignLinkNear = 8
+vSingleLink = 4
+vDoubleLink = 6
+vInterpolateLink = 14
 
-k1NodeIndexList = [kAlignLinkTop, kAlignLinkBottom, kAlignLinkNearY]
-k2NodeIndexList = [kSingleLinkY, kDoubleLinkY]
-k3NodeIndexList = [kInterpolateLink]
+hAlignLinkNear = 7
+hSingleLink = 3
+hDoubleLink = 5
+hInterpolateLink = 13
+
+
+k1NodeIndexList = [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]
+k2NodeIndexList = [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]
+k3NodeIndexList = [vInterpolateLink, hInterpolateLink]
 
 #----------------------------------------
 
 import os
+from FL import *
 
 
 def readTTHintsFile(filePath):
