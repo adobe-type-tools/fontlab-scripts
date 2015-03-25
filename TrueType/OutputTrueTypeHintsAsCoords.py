@@ -36,28 +36,25 @@ kTTHintsFileName = "tthints_coords"
 import os
 from FL import *
 
-vAlignLinkTop = '1'
-vAlignLinkBottom = '2'
-vAlignLinkNear = '8'
-vSingleLink = '4'
-vDoubleLink = '6'
-vInterpolateLink = '14'
+vAlignLinkTop = 1
+vAlignLinkBottom = 2
+hSingleLink = 3
+vSingleLink = 4
+hDoubleLink = 5
+vDoubleLink = 6
+hAlignLinkNear = 7
+vAlignLinkNear = 8
+hInterpolateLink = 13
+vInterpolateLink = 14
+hMidDelta = 20
+vMidDelta = 21
+hFinDelta = 22
+vFinDelta = 23
 
-vMidDelta = '21'
-vFinDelta = '23'
-
-hAlignLinkNear = '7'
-hSingleLink = '3'
-hDoubleLink = '5'
-hInterpolateLink = '13'
-
-hMidDelta = '20'
-hFinDelta = '22'
-
-deltas = map(int, [hMidDelta, hFinDelta, vMidDelta, vFinDelta])
-interpolations = map(int, [hInterpolateLink, vInterpolateLink])
-links = map(int, [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink])
-anchors = map(int, [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear])
+deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
+interpolations = [hInterpolateLink, vInterpolateLink]
+links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
+anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 offCurveErrorMessage = "\tERROR: Off-curve point %s hinted in glyph %s."
 
@@ -197,6 +194,7 @@ def analyzePoint(glyph, nodeIndex):
 		print offCurveErrorMessage % (point_coordinates, gName)
 
 	return point_coordinates
+
 
 
 def collect_instructions_with_coordinates(tth, gName):

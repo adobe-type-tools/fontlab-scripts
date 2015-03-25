@@ -52,23 +52,25 @@ kTTHintsFileName = "tthints"
 import os
 from FL import *
 
-vAlignLinkTop = '1'
-vAlignLinkBottom = '2'
-vAlignLinkNear = '8'
-vSingleLink = '4'
-vDoubleLink = '6'
-vInterpolateLink = '14'
+vAlignLinkTop = 1
+vAlignLinkBottom = 2
+hSingleLink = 3
+vSingleLink = 4
+hDoubleLink = 5
+vDoubleLink = 6
+hAlignLinkNear = 7
+vAlignLinkNear = 8
+hInterpolateLink = 13
+vInterpolateLink = 14
+hMidDelta = 20
+vMidDelta = 21
+hFinDelta = 22
+vFinDelta = 23
 
-vMidDelta = '21'
-vFinDelta = '23'
-
-hAlignLinkNear = '7'
-hSingleLink = '3'
-hDoubleLink = '5'
-hInterpolateLink = '13'
-
-hMidDelta = '20'
-hFinDelta = '22'
+deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
+interpolations = [hInterpolateLink, vInterpolateLink]
+links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
+anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 
 listGlyphsSelected = []
@@ -77,7 +79,7 @@ def getgselectedglyphs(font, glyph, gindex):
 fl.ForSelected(getgselectedglyphs)
 
 
-allGlyphsHintList = ["#Glyph name\tTT hints\n"]
+allGlyphsHintList = ["# Glyph name\tTT hints\n"]
 
 
 def readTTHintsFile(filePath):
@@ -129,21 +131,22 @@ def processTTHintsFileData(ttHintsList):
 
 def checkForOffCurve(commands, gName):
 	gIndex = fl.font.FindGlyph(gName)
+	commandCode = commands[0]
 	
-	hintValuesList = commands.split(',')
-	
-	if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
-		nodeIndexList = [int(hintValuesList[1])]
-	elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
-		nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-	elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
-		nodeIndexList = [int(x) for x in hintValuesList[1:4]]
+	if commandCode in anchors: 
+		'The instruction is an Align Link (top or bottom), so only one node index is provided.'
+		nodeIndexList = [commands[1]]
+	elif commandCode in links: 
+		'The instruction is a Single Link or a Double Link, so two node indexes are provided.'
+		nodeIndexList = [x for x in commands[1:3]]
+	elif commandCode in interpolations: 
+		'The instruction is an Interpolation Link, so three node indexes are provided.'
+		nodeIndexList = [x for x in commands[1:4]]
+	elif commandCode in deltas:
+		'The instruction is a Delta, one node index is provided.'
+		nodeIndexList = [commands[1]]
 	else:
-		if hintValuesList[0] in [vMidDelta, vFinDelta, hMidDelta, hFinDelta]:
-			print 'NOTE: Ignoring Delta hint in %s.' % gName
-		else:
-			print "ERROR: Hint type not supported in %s." % gName
-		
+		print "ERROR: Hint type not supported in %s." % gName
 		nodeIndexList = []
 	
 	for hintedNodeIndex in nodeIndexList:
@@ -161,13 +164,18 @@ def checkForOffCurve(commands, gName):
 def collectInstructions(tth, gName):
 	commandsList = []
 	for inst in tth.commands:
-		params = ''
+		params = []
+		command = [inst.code]
 		for p in inst.params:
-			params += "%d," % p
-		command = "%d,%s" % (inst.code, params[:-1]) # trim last comma
-		commandsList.append(command)
+			command.append(p)
+
+		command_string = ','.join(map(str, command))
+		# Convert list of instructions to comma-separated string.
+		commandsList.append(command_string)
+		
 		checkForOffCurve(command, gName)
 	return commandsList
+
 
 
 def processGlyphs(ttHintsDict):
