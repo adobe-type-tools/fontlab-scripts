@@ -25,12 +25,13 @@ DEALINGS IN THE SOFTWARE.
 
 __doc__ = """
 
-This FontLab script will convert one or more hinted PFA/UFO or TXT files into TTF files, for use 
-as input for makeOTF.
-The script will first ask for a directory, which usually should be the family's top-most folder.
-It will then crawl through that folder and process all input files it finds.
-In addition to the directory, the script will also ask for an encoding file. This encoding file
-is a FontLab '.enc' file which the script will use for ordering the glyphs.
+This FontLab script will convert one or more hinted PFA/UFO or TXT files
+into TTF files, for use as input for makeOTF.
+The script will first ask for a directory, which usually should be the 
+family's top-most folder. It will then crawl through that folder and 
+process all input files it finds. In addition to the directory, the script 
+will also ask for an encoding file. This encoding file is a FontLab '.enc'
+file which the script will use for ordering the glyphs.
 
 ==================================================
 
@@ -45,6 +46,10 @@ import os
 import re
 import sys
 import time
+
+import InputTrueTypeHints
+reload(InputTrueTypeHints)
+
 from FL import *
 import fl_cmd
 try:
@@ -60,7 +65,8 @@ PC  = False
 if sys.platform in ('mac', 'darwin'): MAC = True
 elif os.name == 'nt': PC = True
 
-# Adding the FDK Path to the env variable (on Mac only) so that command line tools can be called from FontLab:
+# Adding the FDK Path to the env variable (on Mac only) so 
+# that command line tools can be called from FontLab:'
 if MAC:
     fdkPathMac = os.sep.join((os.path.expanduser('~'), 'bin', 'FDK', 'tools', 'osx'))
     envPath = os.environ["PATH"]
@@ -92,7 +98,6 @@ hAlignLinkNear = '7'
 hSingleLink = '3'
 hDoubleLink = '5'
 hInterpolateLink = '13'
-
 
 
 # find-replace text for TTX
@@ -279,99 +284,6 @@ def replaceStemsAndPPMs():
         fl.font.ttinfo.vstem_data[i] = stem
 
 
-def readTTHintsFile(filePath):
-    file = open(filePath, "r")
-    data = file.read()
-    file.close()
-    lines = data.splitlines()
-
-    # Empty TTHints list
-    del ttHintsList[:]
-    
-    for i in range(len(lines)):
-        line = lines[i]
-        # Skip over blank lines
-        line2 = line.strip()
-        if not line2:
-            continue
-        # Get rid of all comments
-        if line.find('#') >= 0:
-            continue
-        else:
-            ttHintsList.append(line)
-
-
-def checkForOffCurve(commands, gName):
-    gIndex = fl.font.FindGlyph(gName)
-    
-    hintValuesList = commands.split(',')
-    
-    if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
-        nodeIndexList = [int(hintValuesList[1])]
-    elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
-        nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-    elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
-        nodeIndexList = [int(x) for x in hintValuesList[1:4]]
-    else:
-        print "\t===> ERROR: Hint type not supported in %s. <===" % gName
-        nodeIndexList = []
-    
-    for hintedNodeIndex in nodeIndexList:
-        node = fl.font[gIndex][hintedNodeIndex]
-        try:
-            node.type
-        except:
-            print "\t===> ERROR: Hinting problem in glyph %s. <===" % gName
-            continue
-
-        if node.type == nOFF: # Ignore off-curve nodes in TrueType
-            print "\t===> ERROR: Node #%d in glyph %s is off-curve. <===" % (hintedNodeIndex, gName)
-
-
-def replaceTTHints():
-    global ttHintsEdited
-    
-    for item in ttHintsList:
-        hintItems = item.split("\t")
-        
-        if len(hintItems) == 3:
-            gName, gHints, gMark = hintItems
-            gMark = int(gMark)
-        elif len(hintItems) == 2:
-            gName, gHints = hintItems
-            gMark = 80 # Green color
-        else:
-            print "ERROR: This hint definition does not have the correct format\n\t%s" % item
-            continue
-
-        gIndex = fl.font.FindGlyph(gName)
-        
-        if gIndex != -1:
-            glyph = fl.font[gName]
-        else:
-            print "\tERROR: Glyph %s not found in the font." % gName
-            return
-
-        tth = TTH(glyph)
-        gHintsList = gHints.split(";")
-        for item in gHintsList:
-            checkForOffCurve(item, gName)
-            itemList = item.split(",")
-        # Reset program first?
-            ttc = TTHCommand(int(itemList[0])) # create the TTHCommand
-            del(itemList[0]) # remove the first item of the list
-            # use the remaining items for setting the params, one by one
-            for i in range(len(itemList)):
-                ttc.params[i] = int(itemList[i])
-            tth.commands.append(ttc)
-        tth.SaveProgram(glyph)
-        
-        glyph.mark = gMark
-        fl.UpdateGlyph(gIndex)
-
-    ttHintsEdited = True
-
-
 def processZonesArray(inArray):
     outArray = []
     for x in range(len(inArray)/2):
@@ -460,7 +372,6 @@ def convertT1toTT():
         # Going through all start points backwards, and re-setting them to original position.
         for pointCoords in startPointCoords[::-1]:
             g.SetStartNode(newCoordDict[pointCoords])
-
 
         if not convertT1toTTOptionsAlreadyProcessed:
             conversionOptions.append("Bottom zones above baseline removed")
@@ -817,8 +728,9 @@ def processFonts(fontsList):
          
         tthintsFilePath = os.path.join(folderPath, kTTHintsFileName)
         if os.path.exists(tthintsFilePath):
-            readTTHintsFile(tthintsFilePath)
-            replaceTTHints()
+            InputTrueTypeHints.run(folderPath, coord_option=False)
+            # readTTHintsFile(tthintsFilePath)
+            # replaceTTHints()
          
       # ttfPath = pfaPath.replace('.pfa','.ttf')
         ttfPath = os.path.join(folderPath, kFontTTF) # The filename of the TT output is hardcoded
@@ -858,7 +770,6 @@ def processFonts(fontsList):
 
 
 def run():
-    # global baseFolderPath
     
     # Get folder to process
     baseFolderPath = fl.GetPathName("Select font family directory")
