@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Input TrueType Hints v1.1 - Sep 07 2013
+Input TrueType Hints v1.3 - Mar 24 2015
 
 This FontLab macro will read an external simple text file containing
 TrueType instructions for each glyph, and will apply that data to the
@@ -33,6 +33,7 @@ named "Output TrueType Hints".
 ==================================================
 Versions:
 
+v1.3 - Mar 24 2015 - Enable reading file with coordinates
 v1.2 - Mar 23 2015 - Enable instructions in x-direction
 v1.1 - Sep 07 2013 - Enabled the reading of 'tthints' files with an optional column for glyph color mark
 v1.0 - Jan 07 2013 - Initial release
@@ -40,27 +41,30 @@ v1.0 - Jan 07 2013 - Initial release
 
 #----------------------------------------
 
-kTTHintsFileName = "tthints"
 debugMode = False
 
 #----------------------------------------
 
 vAlignLinkTop = 1
 vAlignLinkBottom = 2
-vAlignLinkNear = 8
-vSingleLink = 4
-vDoubleLink = 6
-vInterpolateLink = 14
-
-hAlignLinkNear = 7
 hSingleLink = 3
+vSingleLink = 4
 hDoubleLink = 5
+vDoubleLink = 6
+hAlignLinkNear = 7
+vAlignLinkNear = 8
 hInterpolateLink = 13
+vInterpolateLink = 14
+hMidDelta = 20
+vMidDelta = 21
+hFinDelta = 22
+vFinDelta = 23
 
+deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
+interpolations = [hInterpolateLink, vInterpolateLink]
+links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
+anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
-k1NodeIndexList = [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]
-k2NodeIndexList = [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]
-k3NodeIndexList = [vInterpolateLink, hInterpolateLink]
 
 #----------------------------------------
 
@@ -79,8 +83,8 @@ def readTTHintsFile(filePath):
 	for i in range(len(lines)):
 		line = lines[i]
 		# Skip over blank lines
-		line2 = line.strip()
-		if not line2:
+		stripline = line.strip()
+		if not stripline:
 			continue
 		# Skip over comments
 		if line.find('#') >= 0:
@@ -91,21 +95,65 @@ def readTTHintsFile(filePath):
 	return ttHintsList
 
 
+
+def transformItemList(glyph, itemList):
+	'''
+	Transforms an item list with point coordinates to an itemList with point indices, for instance:
+
+		input:  [4, (155, 181), (180, 249), 0, -1]
+		output: [4, 6, 9, 0, -1]	
+
+		input:  [3, 'BL', (83, 0), 0, -1]
+		output: [3, 34, 0, 0, -1]
+
+	'''
+
+	pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
+
+	output = []
+	for item in itemList:
+		if item == 'BL':
+			'bottom left hinted'
+			output.append(len(glyph))
+		elif item == 'BR':
+			'bottom right hinted'
+			output.append(len(glyph) + 1)
+		elif isinstance(item, tuple):
+			'point coordinates'
+			pointIndex = pointDict.get(item, None)
+			if pointIndex == None:
+				print '\tERROR: point %s does not exist in glyph %s.' % (item, glyph.name)
+			output.append(pointIndex)
+		else:
+			'other hinting data, integers'
+			output.append(item)
+
+	if None in output:
+		print '\tERROR: could not read recipe of glyph %s' % glyph.name
+		return []
+	else:
+		return output
+
+
+
 def applyTTHints(ttHintsList):
 	glyphsHinted = 0
 	for item in ttHintsList:
 		hintItems = item.split("\t")
 		
 		if len(hintItems) == 3:
-			gName, gHints, gMark = hintItems
-			gMark = int(gMark)
+			'line contains glyph name, hint info and mark color'
+			pass
+
 		elif len(hintItems) == 2:
-			gName, gHints = hintItems
-			gMark = 80 # Green color
+			'line does not contain mark color'
+			hintItems.append(180) # green
+		
 		else:
 			print "ERROR: This hint definition does not have the correct format\n\t%s" % item
 			continue
 
+		gName, gHintsString, gMark = hintItems
 		gIndex = fl.font.FindGlyph(gName)
 		
 		if gIndex != -1:
@@ -114,11 +162,11 @@ def applyTTHints(ttHintsList):
 			print "ERROR: Glyph %s not found in the font." % gName
 			continue
 		
-		if not len(gHints.strip()):
+		if not len(gHintsString.strip()):
 			print "WARNING: There are no hints defined for glyph %s." % gName
 			continue
 
-		gHintsList = gHints.split(";")
+		gHintsList = gHintsString.split(";")
 		
 		tth = TTH(glyph)
 		tth.LoadProgram(glyph)
@@ -128,18 +176,19 @@ def applyTTHints(ttHintsList):
 			print gName
 		
 		for item in gHintsList:
-			itemList = item.split(",")
-			
+			itemList = list(eval(item))
+
 			if len(itemList) < 3:
 				print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, item)
 				continue
 			
 			try:
-				commandType = int(itemList[0])
+				commandType = itemList[0]
+				# this does nothing.
 			except:
 				print "ERROR: A hint definition for glyph %s has an invalid command type: %s" % (gName, item)
 				continue
-			
+
 			# Create the TTHCommand
 			try:
 				ttc = TTHCommand(commandType)
@@ -147,45 +196,62 @@ def applyTTHints(ttHintsList):
 				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range 1-23." % (gName, item)
 				continue
 			
-			# Remove the first item of the list (i.e. the command type)
-			del(itemList[0])
-			
-			# Determine how many parameters to consider as node indexes
-			if commandType in k1NodeIndexList: # the instruction is an Align Link (top or bottom), so only one node is provided
-				nodeIndexCount = 1
-			elif commandType in k2NodeIndexList: # the instruction is a Single Link or a Double Link, so two nodes are provided
-				nodeIndexCount = 2
-			elif commandType in k3NodeIndexList: # the instruction is an Interpolation Link, so three nodes are provided
-				nodeIndexCount = 3
+			itemList = transformItemList(glyph, itemList)
+
+			if not itemList:
+				continue
+
+			paramError = False
+
+			if commandType in deltas:
+				nodes = [itemList[1]]
+			elif commandType in links:
+				nodes = itemList[1:3]
+			elif commandType in anchors + interpolations:
+				nodes = itemList[1:-1]
 			else:
 				print "WARNING: Hint type %d in glyph %s is not yet supported." % (commandType, gName)
-				nodeIndexCount = 0
-			
-			paramError = False
-			
-			# Use the remaining items for setting the parameters, one by one
-			for i in range(len(itemList)):
+				nodes = []
+
+			for nodeIndex in nodes:
 				try:
-					paramValue = int(itemList[i])
-					if nodeIndexCount:
-						gNode = glyph.nodes[paramValue]
+					gNode = glyph.nodes[nodeIndex]
 				except IndexError:
-					print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (gName, item)
-					paramError = True
-					break
-				except:
-					print "ERROR: A hint definition for glyph %s has an invalid parameter value: %s" % (gName, item)
-					paramError = True
-					break
-				ttc.params[i] = paramValue
-				nodeIndexCount -= 1
-			
+					if nodeIndex in range(len(glyph), len(glyph)+2):
+						pass
+					else:
+						print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (gName, nodeIndex)
+						paramError = True
+						break
+
+
+
+			for i, item in enumerate(itemList[1:]):
+				ttc.params[i] = item
+
+			# for i, item in enumerate(itemList[1:]):
+			# 	try:
+			# 		paramValue = item
+			# 		if nodeIndexCount:
+			# 			gNode = glyph.nodes[paramValue]
+			# 	except IndexError:
+			# 		print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (gName, item)
+			# 		paramError = True
+			# 		break
+			# 	except:
+			# 		print "ERROR: A hint definition for glyph %s has an invalid parameter value: %s" % (gName, item)
+			# 		paramError = True
+			# 		break
+			# 	ttc.params[i] = paramValue
+			# 	nodeIndexCount -= 1
+
+
 			if not paramError:
 				tth.commands.append(ttc)
 		
 		if len(tth.commands):
 			tth.SaveProgram(glyph)
-			glyph.mark = gMark
+			glyph.mark = int(gMark)
 			fl.UpdateGlyph(gIndex)
 			glyphsHinted += 1
 	
@@ -193,9 +259,17 @@ def applyTTHints(ttHintsList):
 		fl.font.modified = 1
 
 
-def run(parentDir):
+
+def run(parentDir, coord_option):
+	if coord_option:
+		kTTHintsFileName = "tthints_coords"
+	else:
+		kTTHintsFileName = "tthints"
+
+
 	tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
 	if os.path.exists(tthintsFilePath):
+		print 'Reading', tthintsFilePath
 		ttHintsList = readTTHintsFile(tthintsFilePath)
 	else:
 		print "Could not find the %s file at %s" % (kTTHintsFileName, tthintsFilePath)
@@ -209,7 +283,8 @@ def run(parentDir):
 		return
 		
 
-def preRun():
+
+def preRun(coord_option=False):
 	# Reset the Output window
 	fl.output = '\n'
 	
@@ -229,7 +304,8 @@ def preRun():
 		print "The font has not been saved. Please save the font and try again."
 		return
 	
-	run(parentDir)
+	run(parentDir, coord_option)
+
 
 
 if __name__ == "__main__":

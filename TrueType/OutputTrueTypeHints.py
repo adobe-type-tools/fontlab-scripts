@@ -33,11 +33,13 @@ new entries as needed. The hinting data can be loaded back into the
 font by using the macro named "Input TrueType Hints".
 
 The script will emit an error if there are hints attached to off-curve
-points. That's the only difference from OutputTrueTypeHints.py.
+points.
 
 ==================================================
 Versions:
-v1.3 - Mar 25 2015 - Allow coordinate output 
+
+v1.3 - Mar 25 2015 - Allow optional coordinate output.
+					 Allow hinting sidebearings.
 v1.2 - Mar 23 2015 – Allow instructions in x-direction.
 v1.1 - Mar 04 2015 – change name to Output TrueType Hints to supersede 
 					 the old script of the same name.
