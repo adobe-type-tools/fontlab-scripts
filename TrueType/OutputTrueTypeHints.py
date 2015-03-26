@@ -26,11 +26,11 @@ DEALINGS IN THE SOFTWARE.
 __doc__ = """
 Output TrueType Hints v1.3 - Mar 25 2015
 
-This FontLab macro will write an external simple text file containing
+This FontLab macro will write a simple text file containing
 TrueType instructions for each selected glyph. If the external file
 already exists, the script will replace the existing entries and add
-new ones. The hinting data can be loaded back into the font by using
-the macro named "Input TrueType Hints".
+new entries as needed. The hinting data can be loaded back into the 
+font by using the macro named "Input TrueType Hints".
 
 The script will emit an error if there are hints attached to off-curve
 points. That's the only difference from OutputTrueTypeHints.py.
@@ -100,10 +100,12 @@ def readTTHintsFile(filePath):
 	return ttHintsList
 
 
+
 def writeTTHintsFile(content, filePath):
 	outfile = open(filePath, 'w')
 	outfile.writelines(content)
 	outfile.close()
+
 
 
 ttHintsGlyphNamesList = []
@@ -122,77 +124,41 @@ def processTTHintsFileData(ttHintsList):
 		ttHintsGlyphNamesList.append(gName)
 	
 	return ttHintsDict
+
 	
-
-def checkForOffCurve(commands, gName):
-	gIndex = fl.font.FindGlyph(gName)
-	commandCode = commands[0]
-	
-	if commandCode in anchors: 
-		'The instruction is an Align Link (top or bottom), so only one node index is provided.'
-		nodeIndexList = [commands[1]]
-	elif commandCode in links: 
-		'The instruction is a Single Link or a Double Link, so two node indexes are provided.'
-		nodeIndexList = [x for x in commands[1:3]]
-	elif commandCode in interpolations: 
-		'The instruction is an Interpolation Link, so three node indexes are provided.'
-		nodeIndexList = [x for x in commands[1:4]]
-	elif commandCode in deltas:
-		'The instruction is a Delta, one node index is provided.'
-		nodeIndexList = [commands[1]]
-	else:
-		print "ERROR: Hint type not supported in %s." % gName
-		nodeIndexList = []
-	
-	for hintedNodeIndex in nodeIndexList:
-		node = fl.font[gIndex][hintedNodeIndex]
-		try:
-			node.type
-		except:
-			print "ERROR: Hinting problem in glyph %s." % gName
-			continue
-
-		if node.type == nOFF:
-			print "ERROR: Hinted off-curve point #%d in glyph %s." % (hintedNodeIndex, gName)
-
-
-def collectInstructions(tth, gName):
-	commandsList = []
-	for inst in tth.commands:
-		command = [inst.code]
-		for p in inst.params:
-			command.append(p)
-
-		command_string = ','.join(map(str, command))
-		# Convert list of instructions to comma-separated string.
-		commandsList.append(command_string)
-		
-		checkForOffCurve(command, gName)
-	return commandsList
-
 
 def analyzePoint(glyph, nodeIndex):
+	'''Analyzes a given point for a given glyph.
+	   In a normal case, this function returns a tuple of point index and point coordinates.
+	   If the sidebearings have been hinted, this function returns a tuple containing the flag 
+	   for the appropriate sidebearing.
+
+	'''
+
 	point = glyph[nodeIndex]
 	try: point.type
 
 	except:
-		'''
-		Left or right bottom point have been hinted:
-		In the hinting code, those points are stored as point indices larger than the actual glyph.
-		Since those points cannot be grasped in the context of an outline, 
-		flags are created
+		''' This happens if left or right bottom point have been hinted.
+			In the hinting code, those points are stored as point indices greater than the actual
+			point count of the glyph. Since those points cannot be grasped in the context of the
+			outline, flags are created:
+			"BL" is bottom left
+			"BR" is bottom right.
 
-		'''
+			Those flags are written into the output file as strings with quotes, so they can be parsed
+			with eval() when reading the file later.'''
+
 		if nodeIndex == len(glyph):
 			point_flag = '"BL"'
 		elif nodeIndex == len(glyph) + 1:
 			point_flag = '"BR"'
 		else:
-			'point not in glyph'
+			'point not in glyph -- which should not happen, but you never know.'
 			print '\tERROR: Hinting problem in glyph %s' % glyph.name
-			continue
+			return '',''
 
-		return point_flag
+		return point_flag, point_flag
 
 	point_coordinates = point.x, point.y
 
@@ -200,83 +166,96 @@ def analyzePoint(glyph, nodeIndex):
 		gName = glyph.name
 		print "\tERROR: Off-curve point %s hinted in glyph %s." % (point_coordinates, gName)
 
-	return point_coordinates
+	return nodeIndex, point_coordinates
 
 
 
-def collectInstructions2(tth, gName, coord_option):
-	'''
+def collectInstructions(tth, gName, coord_option):
+	''' Parses tth commands (list of integers) and returns them formatted
+		for writing the data into an external text file.
 
-	Data structure: 
 
-	anchors:
-	[command code, point index, alignment]
+		tth data structure: 
+		-------------------
 
-	single and double links:
-	[command code, point index 1, point index 2, stem ID, alignment]
+		anchors:
+		[command code, point index, alignment]
 
-	interpolations:
-	[command code, point index 1, point index 2, point index 3, alignment]
+		single and double links:
+		[command code, point index 1, point index 2, stem ID, alignment]
 
-	deltas:
-	[command code, point index, offset, point range min, point range max]
+		interpolations:
+		[command code, point index 1, point index 2, point index 3, alignment]
 
+		deltas:
+		[command code, point index, offset, point range min, point range max]
 	'''
 
 	glyph = fl.font[gName]
 	coord_commandsList = []
-	commandsList = []
+	index_commandsList = []
+
 	for inst in tth.commands:
 		command = [inst.code]
 		coord_command = [inst.code]
+		index_command = [inst.code]
 
 		for p in inst.params:
+			'create raw tth command list to parse'
 			command.append(p)
-
 
 		if inst.code in deltas:
 			'delta'
 			nodeIndex = command[1]
 			deltaDetails = command[2:]
-			point_coordinates = analyzePoint(glyph, nodeIndex)
+			point_index, point_coordinates = analyzePoint(glyph, nodeIndex)
 
 			coord_command.append(point_coordinates)
+			index_command.append(point_index)
 			coord_command.extend(deltaDetails)
+			index_command.extend(deltaDetails)
 
 		elif inst.code in links:
 			'single- or double link'
-
+			linkDetails = command[-2:]
 			for nodeIndex in command[1:3]:
-				point_coordinates = analyzePoint(glyph, nodeIndex)
+				point_index, point_coordinates = analyzePoint(glyph, nodeIndex)
 
 				coord_command.append(point_coordinates)
-			coord_command.extend(command[-2:])
+				index_command.append(point_index)
+			coord_command.extend(linkDetails)
+			index_command.extend(linkDetails)
 
 		elif inst.code in anchors + interpolations:
 			'anchor or interpolation'
+			commandDetails = command[-1]
 			for nodeIndex in command[1:-1]:
-				point_coordinates = analyzePoint(glyph, nodeIndex)
+				point_index, point_coordinates = analyzePoint(glyph, nodeIndex)
 
 				coord_command.append(point_coordinates)
-			coord_command.append(command[-1])
+				index_command.append(point_index)
+			coord_command.append(commandDetails)
+			index_command.append(commandDetails)
 
 		else:
 			'unknown instruction code'
 			print "\tERROR: Hinting problem in glyph %s." % gName
-			continue
+			coord_command = []
+			index_command = []
 
 
 		coord_command_string = ','.join(map(str, coord_command))
 		coord_command_string = coord_command_string.replace(' ', '')
-		command_string = ','.join(map(str, command))
+		index_command_string = ','.join(map(str, index_command))
 
-		commandsList.append(command_string)
+		index_commandsList.append(index_command_string)
 		coord_commandsList.append(coord_command_string)
 
 	if coord_option:
 		return coord_commandsList
 	else:
-		return commandsList
+		return index_commandsList
+
 
 
 def processGlyphs(ttHintsDict, coord_option):
@@ -291,12 +270,13 @@ def processGlyphs(ttHintsDict, coord_option):
 				tth.LoadProgram()
 		
 				if len(tth.commands):
-					gHints = "%s\t%s\n" % (gName, ';'.join(collectInstructions2(tth, gName, coord_option)))
+					gHints = "%s\t%s\n" % (gName, ';'.join(collectInstructions(tth, gName, coord_option)))
 					allGlyphsHintList.append(gHints)
 				else:
 					print "WARNING: The glyph %s has no TrueType hints." % gName
 			else:
 				allGlyphsHintList.append(ttHintsDict[gName] + '\n')
+
 
 
 def run(parentDir, coord_option):
@@ -340,6 +320,7 @@ def run(parentDir, coord_option):
 	print "Done!"
 		
 
+
 def preRun(coord_option=False):
 	# Reset the Output window
 	fl.output = '\n'
@@ -361,6 +342,7 @@ def preRun(coord_option=False):
 		return
 	
 	run(parentDir, coord_option)
+
 
 
 if __name__ == "__main__":
