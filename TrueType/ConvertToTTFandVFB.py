@@ -89,10 +89,6 @@ kFontTXT = "font.txt"
 kFontUFO = "font.ufo"
 kFontTTF = "font.ttf"
 
-# find-replace text for patching the `prep` table with TTX
-kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
-kPrepTableReplace = """WCVTP[ ]\t/* WriteCVTInPixels */\n      MPPEM[ ]\n      PUSHW[ ]\t/* 1 value pushed */\n      96\n      GT[ ]\n      IF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      ELSE[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      0\n      EIF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      INSTCTRL[ ]\n    </assembly>"""
-
 conversionOptions = []
 convertT1toTTOptionsProcessed = False
 changeTTfontSettingsProcessed = False
@@ -102,16 +98,24 @@ setTTautohintPrefsProcessed = False
 
 baselineZonesWereRemoved = False
 fontZonesWereReplaced = False
-
-hPPMsList = []
-vPPMsList = []
 stemsAndPPMsEdited = False
-
-ttHintsList = []
 ttHintsEdited = False
 
 flPrefs = Options()
 flPrefs.Load()
+
+
+def readFile(filePath):
+    file = open(filePath, 'r')
+    fileContent = file.read().splitlines()
+    file.close()
+    return fileContent
+
+
+def writeFile(contentList, filePath):
+    outfile = open(filePath, 'w')
+    outfile.writelines(contentList)
+    outfile.close()
 
 
 def getFontPaths(path):
@@ -129,36 +133,22 @@ def getFontPaths(path):
         ufoFiles = [match.group(1) for item in fileAndFolderList for match in [ufoRE.match(item)] if match]
         txtFiles = [match.group(0) for item in fileAndFolderList for match in [txtRE.match(item)] if match]
 
-        # Prioritizing the list, so that only one source files is found and converted.
-        # Order of priority is PFA - UFO - TXT:
+        # Prioritizing the list of source files, so that only one of them is found and converted; in case
+        # there are multiple possible files in a single folder. Order of priority is PFA - UFO - TXT.
         allFontsFound = pfaFiles + ufoFiles + txtFiles
 
         if len(allFontsFound):
             print allFontsFound
             item = allFontsFound[0]
             fontsList.append(os.path.join(root, item))
-
         else:
             continue
 
     return fontsList
 
 
-def readFile(filePath):
-    file = open(filePath, 'r')
-    fileContent = file.read().splitlines()
-    file.close()
-    return fileContent
-
-
-def writeFile(contentList, filePath):
-    outfile = open(filePath, 'w')
-    outfile.writelines(contentList)
-    outfile.close()
-
-
-# Get the second column of the original GOADB file and return it as a list
 def getGOADB2ndColumn(goadbList):
+    'Get the second column of the original GOADB file and return it as a list.'
     resultList = []
     lineNum = 1
     skippedLines = 0
@@ -166,18 +156,18 @@ def getGOADB2ndColumn(goadbList):
     
     for line in goadbList:
         # Skip over blank lines
-        line2 = line.strip()
-        if not line2:
+        stripline = line.strip()
+        if not stripline:
             skippedLines += 1
             continue
 
         result = re_match1stCol.match(line)
-        if result: #the result can be None
+        if result: # the result can be None
             resultList.append(result.group(2) + '\n')
-        else: #nothing matched
+        else: # nothing matched
             print "Problem matching line %d (current GOADB)" % lineNum
         
-        lineNum +=1
+        lineNum += 1
 
     if (len(goadbList) != (len(resultList) + skippedLines)):
         print "ERROR: There was a problem processing the current GOADB file"
@@ -199,20 +189,16 @@ def makeTempEncFileFromGOADB(goadbPath):
 
 
 def readPPMsFile(filePath):
-    file = open(filePath, "r")
-    data = file.read()
-    file.close()
-    lines = data.splitlines()
+    lines = readFile(filePath)
 
-    # Empty PPM lists
-    del hPPMsList[:]
-    del vPPMsList[:]
+    hPPMsList = []
+    vPPMsList = []
     
     for i in range(len(lines)):
         line = lines[i]
         # Skip over blank lines
-        line2 = line.strip()
-        if not line2:
+        stripline = line.strip()
+        if not stripline:
             continue
         # Get rid of all comments
         if line.find('#') >= 0:
@@ -223,8 +209,10 @@ def readPPMsFile(filePath):
             else:
                 hPPMsList.append(line)
 
+    return hPPMsList, vPPMsList
 
-def replaceStemsAndPPMs():
+
+def replaceStemsAndPPMs(hPPMsList, vPPMsList):
     global stemsAndPPMsEdited
 
     if len(hPPMsList) != len(fl.font.ttinfo.hstem_data):
@@ -273,15 +261,19 @@ def processZonesArray(inArray):
 
 def removeBottomZonesAboveBaseline():
     global baselineZonesWereRemoved
-    newOtherBluesArray = processZonesArray(fl.font.other_blues[0])  # this is a single master font, so only the first array will have non-zero values
-    if (fl.font.other_blues_num != len(newOtherBluesArray)): baselineZonesWereRemoved = True
+    
+    # this is a single master font, so only the first array will have non-zero values:
+    newOtherBluesArray = processZonesArray(fl.font.other_blues[0])
+    if (fl.font.other_blues_num != len(newOtherBluesArray)):
+        baselineZonesWereRemoved = True
     fl.font.other_blues_num = len(newOtherBluesArray)  # trim the number of zones
 
     for x in range(len(newOtherBluesArray)):
         fl.font.other_blues[0][x] = newOtherBluesArray[x]
     
     newFamilyOtherBluesArray = processZonesArray(fl.font.family_other_blues[0])
-    if (fl.font.family_other_blues_num != len(newFamilyOtherBluesArray)): baselineZonesWereRemoved = True
+    if (fl.font.family_other_blues_num != len(newFamilyOtherBluesArray)):
+        baselineZonesWereRemoved = True
     fl.font.family_other_blues_num = len(newFamilyOtherBluesArray)
     
     for x in range(len(newFamilyOtherBluesArray)):
@@ -289,10 +281,13 @@ def removeBottomZonesAboveBaseline():
 
 
 def replaceFontZonesByFamilyZones():
-    """The font's zones are replaced by the family zones to make sure that 
-       all the styles have the same vertical height at all ppems.
-       If the font doesn't have family zones (e.g. Regular style), don't do anything."""
+    """
+    The font's zones are replaced by the family zones to make sure that 
+    all the styles have the same vertical height at all ppems.
+    If the font doesn't have family zones (e.g. Regular style), don't do anything.
+    """
     global fontZonesWereReplaced
+
     # TOP zones
     if len(fl.font.family_blues[0]):
         if fl.font.family_blues_num == 14 and fl.font.blue_values_num < fl.font.family_blues_num:
@@ -303,12 +298,15 @@ def replaceFontZonesByFamilyZones():
         elif fl.font.family_blues_num == 14 and fl.font.blue_values_num == fl.font.family_blues_num:
             pass
         else:
-            fl.font.blue_values_num = fl.font.family_blues_num # This will create a traceback if there are 7 top zones, therefore the IFs above
+            fl.font.blue_values_num = fl.font.family_blues_num 
+            # This will create a traceback if there are 7 top zones, therefore the IFs above
+
         # Replace the font's zones by the family zones
         for x in range(len(fl.font.family_blues[0])):
             fl.font.blue_values[0][x] = fl.font.family_blues[0][x]
         print "WARNING: The font's TOP zones were replaced by the family TOP zones."
         fontZonesWereReplaced = True
+
     # BOTTOM zones
     if len(fl.font.family_other_blues[0]):
         if fl.font.family_other_blues_num == 10 and fl.font.other_blues_num < fl.font.family_other_blues_num:
@@ -319,7 +317,9 @@ def replaceFontZonesByFamilyZones():
         elif fl.font.family_other_blues_num == 10 and fl.font.other_blues_num == fl.font.family_other_blues_num:
             pass
         else:
-            fl.font.other_blues_num = fl.font.family_other_blues_num # This will create a traceback if there are 5 bottom zones, therefore the IFs above
+            fl.font.other_blues_num = fl.font.family_other_blues_num 
+            # This will create a traceback if there are 5 bottom zones, therefore the IFs above
+
         # Replace the font's zones by the family zones
         for x in range(len(fl.font.family_other_blues[0])):
             fl.font.other_blues[0][x] = fl.font.family_other_blues[0][x]
@@ -328,6 +328,10 @@ def replaceFontZonesByFamilyZones():
 
 
 def convertT1toTT():
+    '''
+    Converts an open FL font object from PS to TT outlines, using on-board FontLab commands.
+    The outlines are post-processed to reset starting points to their original position.
+    '''
     global convertT1toTTOptionsProcessed
     
     for g in fl.font.glyphs:
@@ -361,13 +365,16 @@ def convertT1toTT():
 
 def changeTTfontSettings():
     global changeTTfontSettingsProcessed
-    # Clear `gasp` array
+    # Clear `gasp` array:
     if len(fl.font.ttinfo.gasp):
         del fl.font.ttinfo.gasp[0]
-    # Create `gasp` element
+    # Create `gasp` element:
     gaspElement = TTGasp(65535, 2) 
     # Range: 65535=0... 
-    # Options: 0=None 1=Instructions 2=Smoothing 3=Instructions+Smoothing
+    # Options: 0=None 
+    #          1=Instructions 
+    #          2=Smoothing 
+    #          3=Instructions+Smoothing
     
     # Add element to `gasp` array
     fl.font.ttinfo.gasp[0] = gaspElement
@@ -478,7 +485,18 @@ def addNULLandCRglyphs():
     fl.font[kNULLglyphName].width = 0
 
 
-def fixGlyphNames(ttFont):
+def postProccessTTF(ttFont):
+    '''
+    Post-process TTF font as generated by FontLab:
+    - change FontLab-generated glyph name 'nonmarkingreturn' to 'CR'
+    - change FontLab-generated glyph name 'nonmarkingspace' to 'nbspace'
+    - edit `prep` table to stop hints being active at 96 ppm and above.
+    '''
+
+    # find-replace text for patching the `prep` table
+    kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
+    kPrepTableReplace = """WCVTP[ ]\t/* WriteCVTInPixels */\n      MPPEM[ ]\n      PUSHW[ ]\t/* 1 value pushed */\n      96\n      GT[ ]\n      IF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      ELSE[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      0\n      EIF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      INSTCTRL[ ]\n    </assembly>"""
+
     if MAC:
         ttxTool = "ttx"
     if PC:
@@ -486,7 +504,7 @@ def fixGlyphNames(ttFont):
 
     command = "%s -t GlyphOrder -t post -t prep '%s'" % (ttxTool, ttFont)
 
-    # Run TTX to get GlyphOrder, 'post' table and 'prep' table
+    # Run TTX to get GlyphOrder, `post` table and `prep` table
     pp = os.popen(command)
     report = pp.read()
     pp.close()
@@ -515,7 +533,7 @@ def fixGlyphNames(ttFont):
         ttxData = ttxData.replace('name="nonbreakingspace"','name="nbspace"')
         ttxData = ttxData.replace('</extraNames>','  <psName name="nbspace"/>\n    </extraNames>') # Add entry to post table
 
-    # Find-replace data in TTX font to stop TT hints kicking in at 96 ppm and above.
+    # Find and replace data in `prep` table
     if ttxData.find(kPrepTableFind) != -1:
         print 'fixing `prep` table ...'
         ttxData = ttxData.replace(kPrepTableFind,kPrepTableReplace)
@@ -548,6 +566,7 @@ def fixGlyphNames(ttFont):
     if newTTFName != ttFont:
         os.rename(newTTFName, ttFont) # Renames the new file
     
+    # Return if successful
     return 1
 
 
@@ -602,8 +621,9 @@ def processFonts(fontsList):
     setTTgeneratePrefs()
     setTTautohintPrefs()
     
-    i = 1
+    fontIndex = 1
     for pfaPath in fontsList:
+
         # Make temporary encoding file from GOADB file.
         # This step needs to be done per font, because the directory tree selected 
         # may contain more than one family, or because the glyph set of a given family
@@ -652,8 +672,8 @@ def processFonts(fontsList):
             pfaPath = convertUFOfontToPFA(pfaPath)
         
         fl.Open(pfaPath)
-        print "Processing %s ... (%d/%d)" % (fl.font.font_name, i, totalFonts)
-        i += 1
+        print "Processing %s ... (%d/%d)" % (fl.font.font_name, fontIndex, totalFonts)
+        fontIndex += 1
     
         replaceFontZonesByFamilyZones()
         removeBottomZonesAboveBaseline()
@@ -696,16 +716,15 @@ def processFonts(fontsList):
         folderPath, fontFileName = os.path.split(pfaPath)  # path to the folder where the font is contained and the font's file name
         ppmsFilePath = os.path.join(folderPath, kPPMsFileName)
         if os.path.exists(ppmsFilePath):
-            readPPMsFile(ppmsFilePath)
-            replaceStemsAndPPMs()
-         
+            hPPMs, vPPMs = readPPMsFile(ppmsFilePath)
+            replaceStemsAndPPMs(hPPMs, vPPMs)
+
         tthintsFilePath = os.path.join(folderPath, kTTHintsFileName)
         if os.path.exists(tthintsFilePath):
             InputTrueTypeHints.run(folderPath, coord_option=False)
             # readTTHintsFile(tthintsFilePath)
             # replaceTTHints()
          
-      # ttfPath = pfaPath.replace('.pfa','.ttf')
         ttfPath = os.path.join(folderPath, kFontTTF) # The filename of the TT output is hardcoded
         fl.GenerateFont(eval("ftTRUETYPE"), ttfPath)
         
@@ -715,18 +734,18 @@ def processFonts(fontsList):
         fl.font.modified = 0    
         fl.Close(fl.ifont)
 
-        # The TT font generated with FontLab ends up with a few glyph names changed
-        # Fix the glyph names so that makeOTF does not fail
-        # Do not proceed if something went wrong with the glyph renaming process
-        if not fixGlyphNames(ttfPath):
+        # The TT font generated with FontLab ends up with a few glyph names changed.
+        # Fix the glyph names so that makeOTF does not fail, but do not proceed
+        # if anyting goes wrong with the glyph renaming process.
+        if not postProccessTTF(ttfPath):
             print "ERROR: Failed to post-process the TrueType file."
             return
         
-        # Delete temporary Encoding file
+        # Delete temporary Encoding file:
         if os.path.exists(encPath):
             os.remove(encPath)
 
-        # Delete temp PFA
+        # Delete temp PFA:
         if os.path.exists(pfaPathTemp):
             os.remove(pfaPathTemp)
         
@@ -751,8 +770,6 @@ def run():
     startTime = time.time()  # Initiates a timer of the whole process
 
     fontsList = getFontPaths(baseFolderPath)
-    print fontsList
-    return
 
     if len(fontsList):
         processFonts(fontsList)

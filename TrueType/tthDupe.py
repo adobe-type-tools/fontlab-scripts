@@ -349,7 +349,8 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
     readTTHintsFile(tthintsFilePath)
 
     for line in templateTTHintsList:
-        gName, gHints = line.split() # dollar   6,72,56,0;6,13,28,0;6,111,76,0;6,32,97,0;4,56,42,-1,-1;4,13,86,-1,-1;4,72,87,-1,-1;4,28,101,-1,-1
+        gName, gHints = line.split() 
+        # dollar   6,72,56,0;6,13,28,0;6,111,76,0;6,32,97,0;4,56,42,-1,-1;4,13,86,-1,-1;4,72,87,-1,-1;4,28,101,-1,-1
 
         gIndex = ttfont.FindGlyph(gName)
         if gIndex != -1:
