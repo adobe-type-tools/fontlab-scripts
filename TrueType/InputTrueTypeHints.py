@@ -95,9 +95,10 @@ def readTTHintsFile(filePath):
 
 
 
-def transformItemList(glyph, itemList):
+def transformCommandList(glyph, raw_commandList):
 	'''
-	Transforms an item list with point coordinates to an itemList with point indexes, for instance:
+	Transforms a list of commands with point coordinates 
+	to an list of commands with point indexes, for instance:
 
 		input:  [4, (155, 181), (180, 249), 0, -1]
 		output: [4, 6, 9, 0, -1]	
@@ -105,12 +106,15 @@ def transformItemList(glyph, itemList):
 		input:  [3, 'BL', (83, 0), 0, -1]
 		output: [3, 34, 0, 0, -1]
 
+	Also is used to check validity of point coordinates, and
+	transforming sidebearing flags to point indexes.
+
 	'''
 
 	pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
 
 	output = []
-	for item in itemList:
+	for item in raw_commandList:
 		if item == 'BL':
 			'left sidebearing hinted'
 			output.append(len(glyph))
@@ -174,16 +178,17 @@ def applyTTHints(ttHintsList):
 			print gName
 		
 		readingError = False
-		for item in gHintsList:
-			itemList = list(eval(item))
-			commandType = itemList[0]			
-			itemList = transformItemList(glyph, itemList)
+		for commandString in gHintsList:
+			raw_commandList = list(eval(commandString))
+			
+			commandType = raw_commandList[0]
+			commandList = transformCommandList(glyph, raw_commandList)
 
-			if not itemList:
+			if not commandList:
 				readingError = True
 				continue
 			
-			if len(itemList) < 3:
+			if len(commandList) < 3:
 				print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, item)
 				continue
 			
@@ -198,11 +203,11 @@ def applyTTHints(ttHintsList):
 			paramError = False
 
 			if commandType in deltas:
-				nodes = [itemList[1]]
+				nodes = [commandList[1]]
 			elif commandType in links:
-				nodes = itemList[1:3]
+				nodes = commandList[1:3]
 			elif commandType in alignments + interpolations:
-				nodes = itemList[1:-1]
+				nodes = commandList[1:-1]
 			else:
 				print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)
 				paramError = True
@@ -220,7 +225,7 @@ def applyTTHints(ttHintsList):
 						break
 
 
-			for i, item in enumerate(itemList[1:]):
+			for i, item in enumerate(commandList[1:]):
 				ttc.params[i] = item
 
 			if not paramError:
