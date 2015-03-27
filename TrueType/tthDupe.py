@@ -157,6 +157,7 @@ from robofab.world import CurrentFont
 from robofab.objects.objectsRF import RFont
 'The RFont object from robofab.world is not appropriate in this case, because it makes a new FL font.'
 
+fl.output = ''
 MAC = False
 PC  = False
 
@@ -174,17 +175,25 @@ if MAC:
 
 
 # numerical identifiers for different kinds of hints 
-vAlignLinkTop    = '1'
-vAlignLinkBottom = '2'
-vAlignLinkNear   = '8'
-vSingleLink      = '4'
-vDoubleLink      = '6'
-vInterpolateLink = '14'
+vAlignLinkTop = 1
+vAlignLinkBottom = 2
+hSingleLink = 3
+vSingleLink = 4
+hDoubleLink = 5
+vDoubleLink = 6
+hAlignLinkNear = 7
+vAlignLinkNear = 8
+hInterpolateLink = 13
+vInterpolateLink = 14
+hMidDelta = 20
+vMidDelta = 21
+hFinDelta = 22
+vFinDelta = 23
 
-hAlignLinkNear = '7'
-hSingleLink = '3'
-hDoubleLink = '5'
-hInterpolateLink = '13'
+deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
+interpolations = [hInterpolateLink, vInterpolateLink]
+links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
+alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 
 kTTFFileName = "font.ttf"
@@ -198,6 +207,34 @@ templateTTHintsList = []
 templateGlyphNodeIndexDict = {}
 okToProcessTargetFonts = True
 
+
+
+# -----------
+
+'Code for identifying segment intersection:'
+class Point:
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+
+def ccw(A,B,C):
+    return (C.y-A.y)*(B.x-A.x) > (B.y-A.y)*(C.x-A.x)
+
+def segmentsIntersect(seg1, seg2):
+    # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
+    A,B = Point(seg1[0][0],seg1[0][1]), Point(seg1[1][0],seg1[1][1])
+    C,D = Point(seg2[0][0],seg2[0][1]), Point(seg2[1][0],seg2[1][1])
+    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+
+# -----------
+
+
+class myHintedNode:
+    def __init__(self, nodeXpos, nodeYpos, nodeIndexTT, nodeIndexT1):
+        self.nodeXpos = nodeXpos
+        self.nodeYpos = nodeYpos
+        self.nodeIndexTT = nodeIndexTT
+        self.nodeIndexT1 = nodeIndexT1
 
 
 def getGlyphOncurveCoords(glyph):
@@ -232,46 +269,23 @@ def getSegmentsList(ptDict1, ptDict2):
     return segmentsList
 
 
-
-'code for identifying segment intersection:'
-class Point:
-    def __init__(self,x,y):
-        self.x = x
-        self.y = y
-
-def ccw(A,B,C):
-    return (C.y-A.y)*(B.x-A.x) > (B.y-A.y)*(C.x-A.x)
-
-def segmentsIntersect(seg1, seg2):
-    # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
-    A,B = Point(seg1[0][0],seg1[0][1]), Point(seg1[1][0],seg1[1][1])
-    C,D = Point(seg2[0][0],seg2[0][1]), Point(seg2[1][0],seg2[1][1])
-    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
-
-
 def closeAllOpenedFonts():
     for i in range(len(fl))[::-1]: # [::-1] reverses the list
         fl.Close(i)
 
 
 def getFolderPaths(path, startpath):
-    if path != templateFolderPath \
-        and (os.path.exists(os.path.join(path, kPFAFileName)) or os.path.exists(os.path.join(path, kTXTFileName)) or os.path.exists(os.path.join(path, kUFOFileName)))\
-        and os.path.exists(os.path.join(path, kTTFFileName)):
-        folderPathsList.append(path)    #[len(startpath)+1:])
+    if (path != templateFolderPath
+        and (os.path.exists(os.path.join(path, kPFAFileName)) 
+        or os.path.exists(os.path.join(path, kTXTFileName)) 
+        or os.path.exists(os.path.join(path, kUFOFileName)))
+        and os.path.exists(os.path.join(path, kTTFFileName))):
+            folderPathsList.append(path)
     else:
         files = os.listdir(path)
         for file in files:
             if os.path.isdir(os.path.join(path, file)):
                 getFolderPaths(os.path.join(path, file), startpath)
-
-
-class myHintedNode:
-    def __init__(self, nodeXpos, nodeYpos, nodeIndexTT, nodeIndexT1):
-        self.nodeXpos = nodeXpos
-        self.nodeYpos = nodeYpos
-        self.nodeIndexTT = nodeIndexTT
-        self.nodeIndexT1 = nodeIndexT1
 
 
 def saveNewTTHintsFile(folderPath, content):
@@ -359,25 +373,28 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
             print "ERROR: Glyph %s not found in TT font." % gName
             continue
 
-        t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
+        t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) 
+        # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
         
         hintedNodesDict = {} # This dictionary is indexed by the node indexes of the template TT font
         gHintsList = gHints.split(';')
 
-        for gHint in gHintsList:
-            hintValuesList = gHint.split(',')
-            if len(hintValuesList):
-                if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
-                    nodeIndexList = [int(hintValuesList[1])]
-                elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
-                    nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-                elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
-                    nodeIndexList = [int(x) for x in hintValuesList[1:4]]
+        for commandString in gHintsList:
+            commandList = list(eval(commandString))
+            commandType = commandList[0]
+
+            if len(commandString):
+                if commandType in deltas:
+                    print "Delta hints like (%s : %s) are not transferred. Skipping hint..." % (gName, commandString)
+                elif commandType in links:
+                    nodes = commandList[1:3]
+                elif commandType in alignments + interpolations:
+                    nodes = commandList[1:-1]
                 else:
-                    print "Hint type not supported (%s : %s). Skipping..." % (gName, gHint)
+                    print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)
                     continue
                 
-                for hintedNodeIndex in nodeIndexList:
+                for hintedNodeIndex in nodes:
                     node = ttfont[gIndex][hintedNodeIndex]
                     try:
                         node.type
@@ -420,7 +437,7 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
     totalFolders = len(folderPathsList)
     print "%d folders found" % totalFolders
     
-    i = 1
+    fontIndex = 1
     for targetFolderPath in folderPathsList:
         deleteTempPFA = False
         targetFolderName = os.path.basename(targetFolderPath)
@@ -428,6 +445,7 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
         pfaFilePath = os.path.join(targetFolderPath, kPFAFileName)
         txtFilePath = os.path.join(targetFolderPath, kTXTFileName)
         ufoFilePath = os.path.join(targetFolderPath, kUFOFileName)
+
         if os.path.exists(pfaFilePath):
             pass
         elif os.path.exists(txtFilePath):
@@ -445,8 +463,8 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
             print "ERROR: Could not find target %s file. Skipping %s folder..." % (kTTFFileName, targetFolderName)
             continue
         
-        print "\nProcessing %s ... (%d/%d)" % (targetFolderName, i, totalFolders)
-        i += 1
+        print "\nProcessing %s ... (%d/%d)" % (targetFolderName, fontIndex, totalFolders)
+        fontIndex += 1
         
         fl.Open(pfaFilePath)
         targetT1font = fl[fl.ifont]
@@ -502,30 +520,38 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
             ttGlyphNodeIndexDict = collectTTnodeIndexes(gName, targetTTfont) # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
             gHintsList = gHints.split(';')
             newHintsList = []
-    
-            for gHint in gHintsList:
-                newHint = []
-                hintValuesList = gHint.split(',')
-                if len(hintValuesList):
-                    newHint.append(hintValuesList[0])
-                    if hintValuesList[0] in [vAlignLinkTop, vAlignLinkBottom, vAlignLinkNear, hAlignLinkNear]: # the instruction is an Align Link (top or bottom), so only one node is provided
-                        nodeIndexList = [int(hintValuesList[1])]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
-                        hintParamsList = hintValuesList[2:]
-                    
-                    elif hintValuesList[0] in [vSingleLink, vDoubleLink, hSingleLink, hDoubleLink]: # the instruction is a Single Link or a Double Link, so two nodes are provided
-                        nodeIndexList = [int(x) for x in hintValuesList[1:3]]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
-                        hintParamsList = hintValuesList[3:]
-                    
-                    elif hintValuesList[0] in [vInterpolateLink, hInterpolateLink]: # the instruction is an Interpolation Link, so three nodes are provided
-                        nodeIndexList = [int(x) for x in hintValuesList[1:4]]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict)
-                        hintParamsList = hintValuesList[4:]
-                
-                newHint = "%s,%s,%s" % (hintValuesList[0], ','.join(map(str, targetNodeIndexList)), ','.join(hintParamsList))
+
+            for commandString in gHintsList:
+                newHintCommand = []
+                commandList = list(eval(commandString))
+                commandType = commandList[0]
+
+                if len(commandList):
+                    newHintCommand.append(commandType)
+
+                    if commandType in deltas:
+                        continue
+
+                    elif commandType in alignments:
+                        nodes = [commandList[1]]
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        hintParamsList = [commandList[-1]]
+
+                    elif commandType in links:
+                        nodes = commandList[1:3]
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        hintParamsList = commandList[3:]
+
+                    elif commandType in interpolations:
+                        nodes = commandList[1:-1]
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        hintParamsList = [commandList[-1]]
+
+                newCommandList = [commandType] + targetNodeIndexList + hintParamsList
+                newHint = ','.join(map(str, newCommandList))
                 newHintsList.append(newHint)
-            
+
+
             newHintsLine = "%s\t%s" % (gName, ';'.join(newHintsList))
             if gMark:
                 newHintsLine = "%s\t%s" % (newHintsLine, gMark)
