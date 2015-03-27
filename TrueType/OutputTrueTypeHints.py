@@ -67,7 +67,7 @@ vFinDelta = 23
 deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
 interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
-anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
+alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 
 listGlyphsSelected = []
@@ -180,7 +180,7 @@ def collectInstructions(tth, gName, coord_option):
 		tth data structure: 
 		-------------------
 
-		anchors:
+		alignment points:
 		[command code, point index, alignment]
 
 		single and double links:
@@ -228,8 +228,8 @@ def collectInstructions(tth, gName, coord_option):
 			coord_command.extend(linkDetails)
 			index_command.extend(linkDetails)
 
-		elif inst.code in anchors + interpolations:
-			'anchor or interpolation'
+		elif inst.code in alignments + interpolations:
+			'alignment or interpolation'
 			commandDetails = command[-1]
 			for nodeIndex in command[1:-1]:
 				point_index, point_coordinates = analyzePoint(glyph, nodeIndex)

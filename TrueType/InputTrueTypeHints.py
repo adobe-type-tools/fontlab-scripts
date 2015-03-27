@@ -63,7 +63,7 @@ vFinDelta = 23
 deltas = [hMidDelta, hFinDelta, vMidDelta, vFinDelta]
 interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
-anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
+alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 #----------------------------------------
 
@@ -201,7 +201,7 @@ def applyTTHints(ttHintsList):
 				nodes = [itemList[1]]
 			elif commandType in links:
 				nodes = itemList[1:3]
-			elif commandType in anchors + interpolations:
+			elif commandType in alignments + interpolations:
 				nodes = itemList[1:-1]
 			else:
 				print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)

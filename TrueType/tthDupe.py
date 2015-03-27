@@ -41,8 +41,8 @@ of the involved fonts to be open.
 IMPORTANT: 
 ----------
 
-1) This script can only process anchors, single links, double links and 
-interpolations in vertical direction.
+1) 
+This script will not process delta-hints.
 
 2)
 The script can only process TT instructions that are attached to *on-curve* 
