@@ -65,7 +65,6 @@ interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
 anchors = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
-
 #----------------------------------------
 
 import os
@@ -98,7 +97,7 @@ def readTTHintsFile(filePath):
 
 def transformItemList(glyph, itemList):
 	'''
-	Transforms an item list with point coordinates to an itemList with point indices, for instance:
+	Transforms an item list with point coordinates to an itemList with point indexes, for instance:
 
 		input:  [4, (155, 181), (180, 249), 0, -1]
 		output: [4, 6, 9, 0, -1]	
@@ -113,10 +112,10 @@ def transformItemList(glyph, itemList):
 	output = []
 	for item in itemList:
 		if item == 'BL':
-			'bottom left hinted'
+			'left sidebearing hinted'
 			output.append(len(glyph))
 		elif item == 'BR':
-			'bottom right hinted'
+			'right sidebearing hinted'
 			output.append(len(glyph) + 1)
 		elif isinstance(item, tuple):
 			'point coordinates'
@@ -129,7 +128,6 @@ def transformItemList(glyph, itemList):
 			output.append(item)
 
 	if None in output:
-		print '\tERROR: could not read recipe of glyph %s' % glyph.name
 		return []
 	else:
 		return output
@@ -138,8 +136,8 @@ def transformItemList(glyph, itemList):
 
 def applyTTHints(ttHintsList):
 	glyphsHinted = 0
-	for item in ttHintsList:
-		hintItems = item.split("\t")
+	for line in ttHintsList:
+		hintItems = line.split("\t")
 		
 		if len(hintItems) == 3:
 			'line contains glyph name, hint info and mark color'
@@ -147,7 +145,7 @@ def applyTTHints(ttHintsList):
 
 		elif len(hintItems) == 2:
 			'line does not contain mark color'
-			hintItems.append(180) # green
+			hintItems.append(80) # green
 		
 		else:
 			print "ERROR: This hint definition does not have the correct format\n\t%s" % item
@@ -175,20 +173,20 @@ def applyTTHints(ttHintsList):
 		if debugMode:
 			print gName
 		
+		readingError = False
 		for item in gHintsList:
 			itemList = list(eval(item))
+			commandType = itemList[0]			
+			itemList = transformItemList(glyph, itemList)
 
+			if not itemList:
+				readingError = True
+				continue
+			
 			if len(itemList) < 3:
 				print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, item)
 				continue
 			
-			try:
-				commandType = itemList[0]
-				# this does nothing.
-			except:
-				print "ERROR: A hint definition for glyph %s has an invalid command type: %s" % (gName, item)
-				continue
-
 			# Create the TTHCommand
 			try:
 				ttc = TTHCommand(commandType)
@@ -196,10 +194,6 @@ def applyTTHints(ttHintsList):
 				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range 1-23." % (gName, item)
 				continue
 			
-			itemList = transformItemList(glyph, itemList)
-
-			if not itemList:
-				continue
 
 			paramError = False
 
@@ -210,7 +204,8 @@ def applyTTHints(ttHintsList):
 			elif commandType in anchors + interpolations:
 				nodes = itemList[1:-1]
 			else:
-				print "WARNING: Hint type %d in glyph %s is not yet supported." % (commandType, gName)
+				print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)
+				paramError = True
 				nodes = []
 
 			for nodeIndex in nodes:
@@ -225,30 +220,15 @@ def applyTTHints(ttHintsList):
 						break
 
 
-
 			for i, item in enumerate(itemList[1:]):
 				ttc.params[i] = item
-
-			# for i, item in enumerate(itemList[1:]):
-			# 	try:
-			# 		paramValue = item
-			# 		if nodeIndexCount:
-			# 			gNode = glyph.nodes[paramValue]
-			# 	except IndexError:
-			# 		print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (gName, item)
-			# 		paramError = True
-			# 		break
-			# 	except:
-			# 		print "ERROR: A hint definition for glyph %s has an invalid parameter value: %s" % (gName, item)
-			# 		paramError = True
-			# 		break
-			# 	ttc.params[i] = paramValue
-			# 	nodeIndexCount -= 1
-
 
 			if not paramError:
 				tth.commands.append(ttc)
 		
+		if readingError:
+			print '\tProblems with reading recipe of glyph %s\n' % (gName)
+
 		if len(tth.commands):
 			tth.SaveProgram(glyph)
 			glyph.mark = int(gMark)
@@ -261,11 +241,11 @@ def applyTTHints(ttHintsList):
 
 
 def run(parentDir, coord_option):
+
 	if coord_option:
 		kTTHintsFileName = "tthints_coords"
 	else:
 		kTTHintsFileName = "tthints"
-
 
 	tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
 	if os.path.exists(tthintsFilePath):
