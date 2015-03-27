@@ -37,6 +37,7 @@ file which the script will use for ordering the glyphs.
 
 Versions:
 
+v1.2 - Mar 26 2015 - Move TT hint file reading code to adjacent module.
 v1.1 - Mar 23 2015 - Allow instructions in x-direction.
 v1.0 - Mar 04 2015 - Initial public release (Robothon 2015).
 
@@ -87,20 +88,7 @@ kFontTXT = "font.txt"
 kFontUFO = "font.ufo"
 kFontTTF = "font.ttf"
 
-vAlignLinkTop    = '1'
-vAlignLinkBottom = '2'
-vAlignLinkNear   = '8'
-vSingleLink      = '4'
-vDoubleLink      = '6'
-vInterpolateLink = '14'
-
-hAlignLinkNear = '7'
-hSingleLink = '3'
-hDoubleLink = '5'
-hInterpolateLink = '13'
-
-
-# find-replace text for TTX
+# find-replace text for patching the `prep` table with TTX
 kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
 kPrepTableReplace = """WCVTP[ ]\t/* WriteCVTInPixels */\n      MPPEM[ ]\n      PUSHW[ ]\t/* 1 value pushed */\n      96\n      GT[ ]\n      IF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      ELSE[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      0\n      EIF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      INSTCTRL[ ]\n    </assembly>"""
 
@@ -124,6 +112,7 @@ ttHintsEdited = False
 flPrefs = Options()
 flPrefs.Load()
 
+
 def getFontPaths(path):
     fontsList = []
 
@@ -131,39 +120,26 @@ def getFontPaths(path):
         fileAndFolderList = folders[:]
         fileAndFolderList.extend(files)
 
-        pfaX = re.compile(r'(^.+?\.pfa)$', re.IGNORECASE)
-        ufoX = re.compile(r'(^.+?\.ufo)$', re.IGNORECASE)
-        txtX = re.compile(r'^font.txt$', re.IGNORECASE)
+        pfaRE = re.compile(r'(^.+?\.pfa)$', re.IGNORECASE)
+        ufoRE = re.compile(r'(^.+?\.ufo)$', re.IGNORECASE)
+        txtRE = re.compile(r'^font.txt$', re.IGNORECASE)
 
-        pfaFiles = [match.group(1) for item in fileAndFolderList for match in [pfaX.match(item)] if match]
-        ufoFiles = [match.group(1) for item in fileAndFolderList for match in [ufoX.match(item)] if match]
-        txtFiles = [match.group(0) for item in fileAndFolderList for match in [txtX.match(item)] if match]
+        pfaFiles = [match.group(1) for item in fileAndFolderList for match in [pfaRE.match(item)] if match]
+        ufoFiles = [match.group(1) for item in fileAndFolderList for match in [ufoRE.match(item)] if match]
+        txtFiles = [match.group(0) for item in fileAndFolderList for match in [txtRE.match(item)] if match]
 
-        # Prioritizing the search, so that two source files are not found and converted within the same folder.
-        if pfaFiles:
-            item = pfaFiles[0]
-            fontsList.append(os.path.join(root, item))
+        # Prioritizing the list, so that only one source files is found and converted.
+        # Order of priority is PFA - UFO - TXT:
+        allFontsFound = pfaFiles + ufoFiles + txtFiles
 
-        elif ufoFiles:
-            item = ufoFiles[0]
-            fontsList.append(os.path.join(root, item))
-
-        elif txtFiles:
-            item = txtFiles[0]
+        if len(allFontsFound):
+            print allFontsFound
+            item = allFontsFound[0]
             fontsList.append(os.path.join(root, item))
 
         else:
             continue
 
-        # for item in fileAndFolderList:
-        #     if (item[-4:].lower() == ".pfa" and item != "mmfont.pfa"):
-        #         fontsList.append(os.path.join(root, item))
-        #     elif (item[-4:].lower() == ".ufo"):
-        #         fontsList.append(os.path.join(root, item))
-        #     elif (item == kFontTXT):
-        #         fontsList.append(os.path.join(root, item))
-        #     else:
-        #         continue
     return fontsList
 
 
