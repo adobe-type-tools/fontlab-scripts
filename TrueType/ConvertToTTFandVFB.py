@@ -16,8 +16,8 @@ all copies or substantial portions of the Software.
  
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 DEALINGS IN THE SOFTWARE.
@@ -53,6 +53,7 @@ reload(InputTrueTypeHints)
 
 from FL import *
 import fl_cmd
+
 try:
     import dvInput_module
     dvModuleFound = True
@@ -62,9 +63,9 @@ except:
 
 MAC = False
 PC  = False
-
 if sys.platform in ('mac', 'darwin'): MAC = True
 elif os.name == 'nt': PC = True
+
 
 # Adding the FDK Path to the env variable (on Mac only) so 
 # that command line tools can be called from FontLab:'
@@ -93,11 +94,11 @@ kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
 kPrepTableReplace = """WCVTP[ ]\t/* WriteCVTInPixels */\n      MPPEM[ ]\n      PUSHW[ ]\t/* 1 value pushed */\n      96\n      GT[ ]\n      IF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      ELSE[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      0\n      EIF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      INSTCTRL[ ]\n    </assembly>"""
 
 conversionOptions = []
-convertT1toTTOptionsAlreadyProcessed = False
-changeTTfontSettingsAlreadyProcessed = False
-setType1openPrefsAlreadyProcessed = False
-setTTgeneratePrefsAlreadyProcessed = False
-setTTautohintPrefsAlreadyProcessed = False
+convertT1toTTOptionsProcessed = False
+changeTTfontSettingsProcessed = False
+setType1openPrefsProcessed = False
+setTTgeneratePrefsProcessed = False
+setTTautohintPrefsProcessed = False
 
 baselineZonesWereRemoved = False
 fontZonesWereReplaced = False
@@ -327,7 +328,7 @@ def replaceFontZonesByFamilyZones():
 
 
 def convertT1toTT():
-    global convertT1toTTOptionsAlreadyProcessed
+    global convertT1toTTOptionsProcessed
     
     for g in fl.font.glyphs:
 
@@ -349,29 +350,29 @@ def convertT1toTT():
         for pointCoords in startPointCoords[::-1]:
             g.SetStartNode(newCoordDict[pointCoords])
 
-        if not convertT1toTTOptionsAlreadyProcessed:
+        if not convertT1toTTOptionsProcessed:
             conversionOptions.append("Bottom zones above baseline removed")
             conversionOptions.append("Type 1 vertical glyph hints removed")
             conversionOptions.append("Outlines converted to TrueType format")
             conversionOptions.append("Countour direction set to TrueType")
             conversionOptions.append("Hints converted to TrueType instructions")
-            convertT1toTTOptionsAlreadyProcessed = True
+            convertT1toTTOptionsProcessed = True
 
 
 def changeTTfontSettings():
-    global changeTTfontSettingsAlreadyProcessed
-    # Clear gasp array
+    global changeTTfontSettingsProcessed
+    # Clear `gasp` array
     if len(fl.font.ttinfo.gasp):
         del fl.font.ttinfo.gasp[0]
-    # Create gasp element
+    # Create `gasp` element
     gaspElement = TTGasp(65535, 2) 
     # Range: 65535=0... 
     # Options: 0=None 1=Instructions 2=Smoothing 3=Instructions+Smoothing
     
-    # Add element to gasp array
+    # Add element to `gasp` array
     fl.font.ttinfo.gasp[0] = gaspElement
     
-    # Clear hdmx array
+    # Clear `hdmx` array
     for i in range(len(fl.font.ttinfo.hdmx)):
         try:
             del fl.font.ttinfo.hdmx[0]
@@ -382,7 +383,7 @@ def changeTTfontSettings():
     # uncheck "Automatically add .null, CR and space characters"
     fl.font.ttinfo.head_flags = 0
     
-    if not changeTTfontSettingsAlreadyProcessed:
+    if not changeTTfontSettingsProcessed:
         if not len(fl.font.ttinfo.hdmx):
             hdmxArray = None
         else:
@@ -390,33 +391,32 @@ def changeTTfontSettings():
         conversionOptions.append("'gasp' table: %s" % fl.font.ttinfo.gasp[0])
         conversionOptions.append("'hdmx' table: %s" % hdmxArray)
         conversionOptions.append("'vdmx' table: %s" % fl.font.ttinfo.head_flags)
-        changeTTfontSettingsAlreadyProcessed = True
+        changeTTfontSettingsProcessed = True
 
 
 def setType1openPrefs():
-    global setType1openPrefsAlreadyProcessed
+    global setType1openPrefsProcessed
     flPrefs.T1Decompose     = 1 # checked   - Decompose all composite glyphs
     flPrefs.T1Unicode       = 0 # unchecked - Generate Unicode indexes for all glyphs
     flPrefs.OTGenerate      = 0 # unchecked - Generate basic OpenType features for Type 1 fonts with Standard encoding
     flPrefs.T1MatchEncoding = 0 # unchecked - Find matching encoding table if possible
     
-    if not setType1openPrefsAlreadyProcessed:
+    if not setType1openPrefsProcessed:
         conversionOptions.append("T1Decompose = %d" % flPrefs.T1Decompose)
         conversionOptions.append("T1Unicode = %d" % flPrefs.T1Unicode)
         conversionOptions.append("OTGenerate = %d" % flPrefs.OTGenerate)
         conversionOptions.append("T1MatchEncoding = %d" % flPrefs.T1MatchEncoding)
-        setType1openPrefsAlreadyProcessed = True
+        setType1openPrefsProcessed = True
 
 
 def setTTgeneratePrefs():
-    global setTTgeneratePrefsAlreadyProcessed
+    global setTTgeneratePrefsProcessed
     flPrefs.TTENoReorder        = 1 # unchecked - Automatically reorder glyphs
     flPrefs.TTEFontNames        = 1 # option    - Do not export OpenType name records
     flPrefs.TTESmartMacNames    = 0 # unchecked - Use the OpenType names as menu names on Macintosh
     flPrefs.TTEStoreTables      = 0 # unchecked - Write stored custom TrueType/OpenType tables
     flPrefs.TTEExportOT         = 0 # unchecked - Export OpenType layout tables
     flPrefs.DSIG_Use            = 0 # unchecked - Generate digital signature (DSIG table)
-
     flPrefs.TTEHint             = 1 # checked   - Export hinted TrueType fonts
     flPrefs.TTEKeep             = 1 # checked   - Write stored TrueType native hinting
     flPrefs.TTEVisual           = 1 # checked   - Export visual TrueType hints
@@ -425,20 +425,17 @@ def setTTgeneratePrefs():
     flPrefs.CopyHDMXData        = 0 # unchecked - Copy HDMX data from base to composite glyph
     flPrefs.OTWriteMort         = 0 # unchecked - Export "mort" table if possible
     flPrefs.TTEVersionOS2       = 3 # option    - OS/2 table version 3
-    
     flPrefs.TTEWriteKernTable   = 0 # unchecked - Export old-style non-OpenType "kern" table
     flPrefs.TTEWriteKernFeature = 0 # unchecked - Generate OpenType "kern" feature if it is undefined or outdated
-
     flPrefs.TTECmap10           = 1 # option    - Use following codepage to build cmap(1,0) table:
                                     #             [Current codepage in the Font Window]
-
     flPrefs.TTEExportUnicode    = 0 # checked   - Ignore Unicode indexes in the font
                                     # option    - Use following codepage for first 256 glyphs:
                                     #             Do not reencode first 256 glyphs
                                     # unchecked - Export only first 256 glyphs of the selected codepage
                                     # unchecked - Put MS Char Set value into fsSelection field
 
-    if not setTTgeneratePrefsAlreadyProcessed:
+    if not setTTgeneratePrefsProcessed:
         conversionOptions.append("TTENoReorder = %d" % flPrefs.TTENoReorder)
         conversionOptions.append("TTEFontNames = %d" % flPrefs.TTEFontNames)
         conversionOptions.append("TTESmartMacNames = %d" % flPrefs.TTESmartMacNames)
@@ -457,19 +454,19 @@ def setTTgeneratePrefs():
         conversionOptions.append("TTEWriteKernFeature = %d" % flPrefs.TTEWriteKernFeature)
         conversionOptions.append("TTECmap10 = %d" % flPrefs.TTECmap10)
         conversionOptions.append("TTEExportUnicode = %d" % flPrefs.TTEExportUnicode)
-        setTTgeneratePrefsAlreadyProcessed = True
+        setTTgeneratePrefsProcessed = True
 
 
 def setTTautohintPrefs():
-    global setTTautohintPrefsAlreadyProcessed
+    global setTTautohintPrefsProcessed
     # The single link attachment precision is 7 in all cases
-  # flPrefs.TTHHintingOptions = 16135 # All options checked
-  # flPrefs.TTHHintingOptions = 7     # All options unchecked
+    # flPrefs.TTHHintingOptions = 16135 # All options checked
+    # flPrefs.TTHHintingOptions = 7     # All options unchecked
     flPrefs.TTHHintingOptions = 2055  # Cusps option checked
     
-    if not setTTautohintPrefsAlreadyProcessed:
+    if not setTTautohintPrefsProcessed:
         conversionOptions.append("TTHHintingOptions = %d" % flPrefs.TTHHintingOptions)
-        setTTautohintPrefsAlreadyProcessed = True
+        setTTautohintPrefsProcessed = True
 
 
 def addNULLandCRglyphs():
@@ -746,7 +743,6 @@ def processFonts(fontsList):
 
 
 def run():
-    
     # Get folder to process
     baseFolderPath = fl.GetPathName("Select font family directory")
     if not baseFolderPath: # Cancel was clicked or Esc key was pressed
@@ -755,6 +751,8 @@ def run():
     startTime = time.time()  # Initiates a timer of the whole process
 
     fontsList = getFontPaths(baseFolderPath)
+    print fontsList
+    return
 
     if len(fontsList):
         processFonts(fontsList)
@@ -763,11 +761,11 @@ def run():
     
     endTime = time.time()
     elapsedSeconds = endTime-startTime
-    
+
     if (elapsedSeconds/60) < 1:
         print '\nCompleted in %.1f seconds.\n' % elapsedSeconds
     else:
-        print '\nCompleted in %.1f minutes.\n' % (elapsedSeconds/60)
+        print '\nCompleted in %s minutes and %s seconds.\n' % (elapsedSeconds/60, elapsedSeconds%60)
 
     # print "Conversion options:"
     # print '\n'.join(conversionOptions)
