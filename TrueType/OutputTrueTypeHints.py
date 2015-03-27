@@ -219,7 +219,7 @@ def collectInstructions(tth, gName, coord_option):
 
 		elif inst.code in links:
 			'single- or double link'
-			linkDetails = command[-2:]
+			linkDetails = command[3:]
 			for nodeIndex in command[1:3]:
 				point_index, point_coordinates = analyzePoint(glyph, nodeIndex)
 
@@ -230,14 +230,14 @@ def collectInstructions(tth, gName, coord_option):
 
 		elif inst.code in alignments + interpolations:
 			'alignment or interpolation'
-			commandDetails = command[-1]
+			alignmentDetails = command[-1]
 			for nodeIndex in command[1:-1]:
 				point_index, point_coordinates = analyzePoint(glyph, nodeIndex)
 
 				coord_command.append(point_coordinates)
 				index_command.append(point_index)
-			coord_command.append(commandDetails)
-			index_command.append(commandDetails)
+			coord_command.append(alignmentDetails)
+			index_command.append(alignmentDetails)
 
 		else:
 			'unknown instruction code'
