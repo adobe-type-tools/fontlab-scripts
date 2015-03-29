@@ -229,7 +229,7 @@ def segmentsIntersect(seg1, seg2):
 # -----------
 
 
-class myHintedNode:
+class MyHintedNode:
     def __init__(self, nodeXpos, nodeYpos, nodeIndexTT, nodeIndexT1):
         self.nodeXpos = nodeXpos
         self.nodeYpos = nodeYpos
@@ -307,8 +307,8 @@ def readTTHintsFile(filePath):
     for i in range(len(lines)):
         line = lines[i]
         # Skip over blank lines
-        line2 = line.strip()
-        if not line2:
+        stripline = line.strip()
+        if not stripline:
             continue
         # Get rid of all comments
         if line.find('#') >= 0:
@@ -360,6 +360,13 @@ def collectTTnodeIndexes(gName, ttfont):
 
 
 def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
+    '''
+    Creates a dictionary from template font files.
+
+        keys:   node index for each hinted node
+        values: MyHintedNode instance, which contains x, y, templateTTIndex, templateT1Index
+
+    '''
     readTTHintsFile(tthintsFilePath)
 
     for line in templateTTHintsList:
@@ -373,6 +380,7 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
             print "ERROR: Glyph %s not found in TT font." % gName
             continue
 
+        writeGlyphRecipe = True
         t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) 
         # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
         
@@ -396,31 +404,43 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
                 
                 for hintedNodeIndex in nodes:
                     node = ttfont[gIndex][hintedNodeIndex]
+
                     try:
                         node.type
                     except:
-                        print "ERROR: Hinting problem in glyph %s. Skipping..." % gName
+                        print "ERROR: Hinting problem in glyph %s. Skipping glyph ..." % gName
                         okToProcessTargetFonts = False
                         continue
 
-                    if node.type != nOFF: # Ignore off-curve nodes in TrueType
+                    if node.type == nOFF: 
+                        # Ignore off-curve nodes in TrueType, do not write them in the output file
+                        print "Node #%d in glyph %s is off-curve. Skipping glyph ..." % (hintedNodeIndex, gName)
+                        writeGlyphRecipe = False
+                        break
+                        # continue
+
+                    else:
                         nodeCoords = "%s,%s" % (node.x, node.y)
                         if nodeCoords in t1GlyphNodeIndexDict:
                             t1NodeIndex = t1GlyphNodeIndexDict[nodeCoords]
-                            hintedNode = myHintedNode(node.x, node.y, hintedNodeIndex, t1NodeIndex)
+                            hintedNode = MyHintedNode(node.x, node.y, hintedNodeIndex, t1NodeIndex)
                             if hintedNodeIndex not in hintedNodesDict:
                                 hintedNodesDict[hintedNodeIndex] = hintedNode
                         else:
                             print "ERROR: Could not find an on-curve node at %s in the PS font." % nodeCoords
-                    else:
-                        print "Node #%d in glyph %s is off-curve. Skipping..." % (hintedNodeIndex, gName)
-                
-        templateGlyphNodeIndexDict[gName] = [hintedNodesDict, t1GlyphNodesCount]
+
+        if writeGlyphRecipe:
+            templateGlyphNodeIndexDict[gName] = [hintedNodesDict, t1GlyphNodesCount]
+        print templateGlyphNodeIndexDict
+        # XXXXXX
 
 
 def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict):
     newTTindexesList = []
-    templateTTdict = templateGlyphNodeIndexDict[glyph.name][0]
+    try:
+        templateTTdict = templateGlyphNodeIndexDict[glyph.name][0]
+    except KeyError:
+        return None
 
     for templateTTindex in nodeIndexList:
         templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
@@ -429,7 +449,6 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict):
             newTTindexesList.append(ttGlyphNodeIndexDict[targetT1nodeCoords])
         else:
             print "Could not find target node in %s." % glyph.name
-
     return newTTindexesList
 
 
@@ -473,8 +492,11 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
         targetTTfont = fl[fl.ifont]
         
         newTTHintsFileList = ["#Glyph name\tTT hints\tGlyph color\n"]
-        
-        for line in templateTTHintsList: # this list was assembled earlier
+
+        validList = [line for line in templateTTHintsList if line.split()[0] in templateGlyphNodeIndexDict]
+
+        # for line in templateTTHintsList: # this list was assembled earlier
+        for line in validList: 
             gName, gHints = line.split() # dollar   6,72,56,0;6,13,28,0;6,111,76,0;6,32,97,0;4,56,42,-1,-1;4,13,86,-1,-1;4,72,87,-1,-1;4,28,101,-1,-1
             gMark = None
     
@@ -495,9 +517,9 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
             # Check that the glyph in the template T1 font has the same number of nodes as the target T1 font.
             # Although the two fonts should be compatible, if the MM font had overlapping nodes, those will
             # be flattened into a single node when the instance gets processed through CheckOutlines
-          # if (templateGlyphNodeIndexDict[glyph.name][1] != len(glyph)):
-          #     print "ERROR: The PS glyph %s does not have the same number of nodes as the template PS font. Skipping...\n\tPlease check for overlapping nodes in the MM source." % (glyph.name)
-          #     continue
+            # if (templateGlyphNodeIndexDict[glyph.name][1] != len(glyph)):
+            #   print "ERROR: The PS glyph %s does not have the same number of nodes as the template PS font. Skipping...\n\tPlease check for overlapping nodes in the MM source." % (glyph.name)
+            #   continue
             
             # Do a second level of compatibility verification
             ptDict1 = getGlyphOncurveCoords(templateT1RBglyph) # Make a dictionary of the coodinates of on-curve points
@@ -546,6 +568,7 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
                         nodes = commandList[1:-1]
                         targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
                         hintParamsList = [commandList[-1]]
+
 
                 newCommandList = [commandType] + targetNodeIndexList + hintParamsList
                 newHint = ','.join(map(str, newCommandList))
@@ -603,11 +626,11 @@ def run():
     global templateFolderPath
     templateFolderPath = fl.GetPathName("Select directory that contains the 'tthints' template file...")
     
-    # Cancel was clicked or ESC key was pressed
+    # Cancel was clicked or ESC key was pressed:
     if not templateFolderPath:
         return
 
-    # Verify that the files tthints, font.pfa/ufo and font.ttf exist in the folder provided
+    # Verify that the files tthints, font.pfa/ufo and font.ttf exist in the folder provided:
     tthintsFilePath = os.path.join(templateFolderPath, kTTHintsFileName)
     if not os.path.exists(tthintsFilePath):
         print "ERROR: Could not find %s file." % kTTHintsFileName
@@ -632,16 +655,17 @@ def run():
         print "ERROR: Could not find %s file." % kTTFFileName
         return
 
-    global baseFolderPath
+    # global baseFolderPath
     baseFolderPath = fl.GetPathName("Select top directory that contains the fonts to process...")
     
-    # Cancel was clicked or Esc key was pressed
+    # Cancel was clicked or ESC key was pressed:
     if not baseFolderPath:
         return
 
     getFolderPaths(baseFolderPath, baseFolderPath)
 
-    startTime = time.time()  # Initiates a timer of the whole process
+    # Initiates a timer of the whole process:
+    startTime = time.time()
 
 
     if len(folderPathsList):
@@ -658,8 +682,8 @@ def run():
         fl.Open(pfaFilePath)
         templateT1font = fl[fl.ifont]
         # Make a Robofab font of the Type1 template font. This RB font is made by copying each glyph.
-        # There doesn't seem to exist a simpler method that produces reliable results. 
-        # The challenge comes from having to close the FL font downstream.
+        # There doesn't seem to exist a simpler method that produces reliable results -- 
+        # the challenge comes from having to close the FL font downstream.
         templateT1RBfont = RFont()
         currentT1RBfont = CurrentFont()
         for g in currentT1RBfont:
