@@ -138,7 +138,6 @@ def getFontPaths(path):
         allFontsFound = pfaFiles + ufoFiles + txtFiles
 
         if len(allFontsFound):
-            print allFontsFound
             item = allFontsFound[0]
             fontsList.append(os.path.join(root, item))
         else:
