@@ -296,16 +296,18 @@ def saveNewTTHintsFile(folderPath, content):
 
 
 def readTTHintsFile(filePath):
-    file = open(filePath, "r")
-    data = file.read()
-    file.close()
-    lines = data.splitlines()
+    tthfile = open(filePath, "r")
+    tthdata = tthfile.read()
+    tthfile.close()
+    lines = tthdata.splitlines()
+    output = []
 
     # Empty TTHints list
     del templateTTHintsList[:]
     
-    for i in range(len(lines)):
-        line = lines[i]
+    # for i in range(len(lines)):
+    for line in lines:
+        # line = lines[i]
         # Skip over blank lines
         stripline = line.strip()
         if not stripline:
@@ -315,6 +317,18 @@ def readTTHintsFile(filePath):
             continue
         else:
             templateTTHintsList.append(line)
+    
+            output.append(line)
+    output2 = []
+    for line in output:
+        items = line.split()
+        if len(items) == 2:
+            items.append('80')
+        else:
+            continue
+        output2.append(items)
+    
+    return output2
 
 
 def collectT1nodeIndexes(gName, t1font):
@@ -367,11 +381,13 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
         values: MyHintedNode instance, which contains x, y, templateTTIndex, templateT1Index
 
     '''
-    readTTHintsFile(tthintsFilePath)
+    ttHintsList = readTTHintsFile(tthintsFilePath)
 
-    for line in templateTTHintsList:
-        gName, gHints = line.split() 
-        # dollar   6,72,56,0;6,13,28,0;6,111,76,0;6,32,97,0;4,56,42,-1,-1;4,13,86,-1,-1;4,72,87,-1,-1;4,28,101,-1,-1
+    # for line in templateTTHintsList:
+    # for line in ttHintsList:
+    for gName, gHints, gMark in readTTHintsFile(tthintsFilePath):
+        # gName, gHints = line.split() 
+        writeGlyphRecipe = True
 
         gIndex = ttfont.FindGlyph(gName)
         if gIndex != -1:
@@ -380,7 +396,6 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
             print "ERROR: Glyph %s not found in TT font." % gName
             continue
 
-        writeGlyphRecipe = True
         t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) 
         # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
         
@@ -431,7 +446,7 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
 
         if writeGlyphRecipe:
             templateGlyphNodeIndexDict[gName] = [hintedNodesDict, t1GlyphNodesCount]
-        print templateGlyphNodeIndexDict
+        # print templateGlyphNodeIndexDict
         # XXXXXX
 
 
@@ -605,13 +620,16 @@ def makePFAfromTXT(txtFilePath, pfaFilePath):
         pp = Popen(command)
 
 
-def makePFAfromUFO(ufoFilePath, pfaFilePath):
+def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
     if MAC:
         txTool = "tx"
     if PC:
         txTool = "tx.cmd"
 
-    command = "%s -t1 '%s' > '%s'" % (txTool, ufoFilePath, pfaFilePath)
+    if glyphList:
+        command = "%s -t1 -g %s '%s' > '%s'" % (txTool, ','.join(glyphList), ufoFilePath, pfaFilePath)
+    else:
+        command = "%s -t1 '%s' > '%s'" % (txTool, ufoFilePath, pfaFilePath)
     
     # Run tx tool
     if MAC:
@@ -635,6 +653,8 @@ def run():
     if not os.path.exists(tthintsFilePath):
         print "ERROR: Could not find %s file." % kTTHintsFileName
         return
+
+    glyphList = [line[0] for line in readTTHintsFile(tthintsFilePath)]
 
     pfaFilePath = os.path.join(templateFolderPath, kPFAFileName)
     txtFilePath = os.path.join(templateFolderPath, kTXTFileName)
@@ -678,7 +698,7 @@ def run():
             makePFAfromTXT(txtFilePath, pfaFilePath)
         elif not os.path.exists(pfaFilePath) and os.path.exists(ufoFilePath):
             deleteTemplateTempPFA = True
-            makePFAfromUFO(ufoFilePath, pfaFilePath)
+            makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList)
         fl.Open(pfaFilePath)
         templateT1font = fl[fl.ifont]
         # Make a Robofab font of the Type1 template font. This RB font is made by copying each glyph.
@@ -686,7 +706,9 @@ def run():
         # the challenge comes from having to close the FL font downstream.
         templateT1RBfont = RFont()
         currentT1RBfont = CurrentFont()
-        for g in currentT1RBfont:
+        # for g in currentT1RBfont:
+        for gName in glyphList:
+            g = currentT1RBfont[gName]
             templateT1RBfont.insertGlyph(g)
 
         collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font)
