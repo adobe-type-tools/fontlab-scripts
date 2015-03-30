@@ -53,7 +53,7 @@ in both PS and TT outlines.
 It is expected that overlaps are removed in the source CFF and TTF files. This
 ensures outline predictability.
 Depending on the drawing it can mean that there is some work to be done for 
-compatibilizing the outlines, which is usually less work than hinting it.
+compatibilizing the outlines, which is usually less work than re-hinting.
 
 
 
@@ -204,7 +204,6 @@ kTTHintsFileName = "tthints"
 
 folderPathsList = []
 templateTTHintsList = []
-templateGlyphNodeIndexDict = {}
 okToProcessTargetFonts = True
 
 
@@ -288,10 +287,10 @@ def getFolderPaths(path, startpath):
                 getFolderPaths(os.path.join(path, file), startpath)
 
 
-def saveNewTTHintsFile(folderPath, content):
+def saveNewTTHintsFile(folderPath, contentList):
     filePath = os.path.join(folderPath, kTTHintsFileName)
     outfile = open(filePath, 'w')
-    outfile.writelines(content)
+    outfile.writelines(contentList)
     outfile.close()
 
 
@@ -305,9 +304,7 @@ def readTTHintsFile(filePath):
     # Empty TTHints list
     del templateTTHintsList[:]
     
-    # for i in range(len(lines)):
     for line in lines:
-        # line = lines[i]
         # Skip over blank lines
         stripline = line.strip()
         if not stripline:
@@ -317,8 +314,8 @@ def readTTHintsFile(filePath):
             continue
         else:
             templateTTHintsList.append(line)
-    
             output.append(line)
+
     output2 = []
     for line in output:
         items = line.split()
@@ -377,14 +374,13 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
     '''
     Creates a dictionary from template font files.
 
-        keys:   node index for each hinted node
-        values: MyHintedNode instance, which contains x, y, templateTTIndex, templateT1Index
+        keys:   glyph names for all hinted glyphs
+        values: a dictionary of point index as key, and MyHintedNode instance as value.
+                MyHintedNode contains x, y, templateTTIndex, templateT1Index
 
     '''
-    ttHintsList = readTTHintsFile(tthintsFilePath)
+    outputDict = {}
 
-    # for line in templateTTHintsList:
-    # for line in ttHintsList:
     for gName, gHints, gMark in readTTHintsFile(tthintsFilePath):
         # gName, gHints = line.split() 
         writeGlyphRecipe = True
@@ -445,17 +441,15 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font):
                             print "ERROR: Could not find an on-curve node at %s in the PS font." % nodeCoords
 
         if writeGlyphRecipe:
-            templateGlyphNodeIndexDict[gName] = [hintedNodesDict, t1GlyphNodesCount]
-        # print templateGlyphNodeIndexDict
-        # XXXXXX
+            outputDict[gName] = hintedNodesDict
+
+        return outputDict
 
 
-def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict):
+def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, hintingDict):
     newTTindexesList = []
-    try:
-        templateTTdict = templateGlyphNodeIndexDict[glyph.name][0]
-    except KeyError:
-        return None
+    # templateTTdict = templateGlyphNodeIndexDict[glyph.name][0]
+    templateTTdict = hintingDict[glyph.name]
 
     for templateTTindex in nodeIndexList:
         templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
@@ -467,7 +461,7 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict):
     return newTTindexesList
 
 
-def processTargetFonts(tthintsFilePath, templateT1RBfont):
+def processTargetFonts(templateT1RBfont, hintedNodeDict):
     totalFolders = len(folderPathsList)
     print "%d folders found" % totalFolders
     
@@ -508,10 +502,9 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
         
         newTTHintsFileList = ["#Glyph name\tTT hints\tGlyph color\n"]
 
-        validList = [line for line in templateTTHintsList if line.split()[0] in templateGlyphNodeIndexDict]
+        filteredList = [line for line in templateTTHintsList if line.split()[0] in hintedNodeDict]
 
-        # for line in templateTTHintsList: # this list was assembled earlier
-        for line in validList: 
+        for line in filteredList: 
             gName, gHints = line.split() # dollar   6,72,56,0;6,13,28,0;6,111,76,0;6,32,97,0;4,56,42,-1,-1;4,13,86,-1,-1;4,72,87,-1,-1;4,28,101,-1,-1
             gMark = None
     
@@ -525,7 +518,8 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
             # Test outline compatibility between the two glyphs (template and target)
             templateT1RBglyph = templateT1RBfont[gName]
             targetT1RBglyph = targetT1RBfont[gName]
-            if not templateT1RBglyph.isCompatible(targetT1RBglyph, False): # (NOTE: This method doesn't catch the case where the node indexes have rotated)
+            if not templateT1RBglyph.isCompatible(targetT1RBglyph, False): 
+                # (NOTE: This method doesn't catch the case where the node indexes have rotated)
                 print "DEFINITELY NOT COMPATIBLE: %s. Skipping..." % gName
                 continue
     
@@ -571,17 +565,17 @@ def processTargetFonts(tthintsFilePath, templateT1RBfont):
 
                     elif commandType in alignments:
                         nodes = [commandList[1]]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = [commandList[-1]]
 
                     elif commandType in links:
                         nodes = commandList[1:3]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = commandList[3:]
 
                     elif commandType in interpolations:
                         nodes = commandList[1:-1]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict)
+                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = [commandList[-1]]
 
 
@@ -706,16 +700,18 @@ def run():
         # the challenge comes from having to close the FL font downstream.
         templateT1RBfont = RFont()
         currentT1RBfont = CurrentFont()
-        # for g in currentT1RBfont:
+
         for gName in glyphList:
             g = currentT1RBfont[gName]
             templateT1RBfont.insertGlyph(g)
 
-        collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font)
+        # templateGlyphNodeIndexDict contains glyph names as keys, and a list of glyph hinting recipes, and count of hinted nodes.
+        # This has been renamed to hintedNodeDict
+        hintedNodeDict = collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font)
         closeAllOpenedFonts()
         
         if okToProcessTargetFonts:
-            processTargetFonts(tthintsFilePath, templateT1RBfont)
+            processTargetFonts(templateT1RBfont, hintedNodeDict)
         else:
             print "Can't process target fonts because of hinting errors found in template font."
         
