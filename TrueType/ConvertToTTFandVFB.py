@@ -49,7 +49,6 @@ import sys
 import time
 
 import InputTrueTypeHints
-reload(InputTrueTypeHints)
 
 from FL import *
 import fl_cmd

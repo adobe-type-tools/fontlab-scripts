@@ -126,12 +126,11 @@ KNOWN ISSUES:
 -------------
 
 1)
-At the time of writing (December 2014), FontLab has a bug within OSX Yosemite,
-which makes executing external code impossible. Since this script uses the `tx`
-command to convert to and from PFA, this is a problem.
+At the time of writing (March 2015), FontLab has a bug within OSX Yosemite,
+which makes executing external code impossible. Since this script uses several
+external commands (`tx`, `ttx`, `type1`), this is a problem.
 
-The solution is opening FontLab not from the Finder, but from the command line, 
-like this:
+The solution is opening FontLab from the command line, like this:
 
     open "/Applications/FontLab Studio 5.app"
 
@@ -139,12 +138,15 @@ In-depth description of this problem:
 http://forum.fontlab.com/index.php?topic=9134.0
 
 
-
 2)
-os.popen is used to call tx and ttx.
-It is true -- `os.popen` is deprecated; but any attempt to modernize this part
-of the code just resulted in horrible crashes and (no kidding) kernel panics.
+`os.popen` is used to call external commands.
+A deprecated function; but any attempt to modernize this part of the code resulted
+in horrible crashes and even kernel panics.
 
+
+3)
+Does not support duplication of hints that involve sidebearings.
+Too much work for now.
 '''
 
 
@@ -155,12 +157,13 @@ import itertools
 from FL import *
 from robofab.world import CurrentFont 
 from robofab.objects.objectsRF import RFont
-'The RFont object from robofab.world is not appropriate in this case, because it creates a new FL font.'
+
+'The RFont object from robofab.world is not appropriate in this case, because it would create a new FL font.'
 
 fl.output = ''
+
 MAC = False
 PC  = False
-
 if sys.platform in ('mac', 'darwin'): MAC = True
 elif os.name == 'nt': PC = True
 
@@ -171,7 +174,6 @@ if MAC:
     newPathString = envPath + ":" + fdkPathMac
     if fdkPathMac not in envPath:
         os.environ["PATH"] = newPathString
-
 
 
 # numerical identifiers for different kinds of hints 
@@ -318,7 +320,7 @@ def readTTHintsFile(filePath):
     lines = tthdata.splitlines()
 
     glyphList = []
-    hintingDict = {}
+    rawHintingDict = {}
 
     for line in lines:
         # Skip over blank lines
@@ -332,9 +334,9 @@ def readTTHintsFile(filePath):
             gName = line.split()[0]
             gHintingString = line.split()[1]
             glyphList.append(gName)
-            hintingDict[gName] = gHintingString
+            rawHintingDict[gName] = gHintingString
 
-    return glyphList, hintingDict
+    return glyphList, rawHintingDict
 
 
 def collectT1nodeIndexes(gName, t1font):
@@ -350,7 +352,7 @@ def collectT1nodeIndexes(gName, t1font):
     if glyph.nodes: # Just making sure that there's an outline in there ...
         for nodeIndex in range(len(glyph)):
             if glyph.nodes[nodeIndex].type != nOFF: # Ignore off-curve nodes
-                nodeCoords = "%s,%s" % (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
+                nodeCoords = (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
                 if nodeCoords not in nodesDict:
                     nodesDict[nodeCoords] = nodeIndex
 
@@ -370,7 +372,7 @@ def collectTTnodeIndexes(gName, ttfont):
     if glyph.nodes: # Just making sure that there's an outline in there...
         for nodeIndex in range(len(glyph)):
             if glyph.nodes[nodeIndex].type != nOFF: # Ignore off-curve nodes
-                nodeCoords = "%s,%s" % (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
+                nodeCoords = (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
                 if nodeCoords not in nodesDict:
                     nodesDict[nodeCoords] = nodeIndex
                 else:
@@ -379,7 +381,7 @@ def collectTTnodeIndexes(gName, ttfont):
     return nodesDict
 
 
-def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, hintingDict):
+def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, rawHintingDict):
     '''
     Creates a dictionary from template font files and the template tthints file.
 
@@ -391,7 +393,7 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, hintingDi
     outputDict = {}
 
     for gName in glyphList:
-        gHintString = hintingDict[gName]
+        gHintString = rawHintingDict[gName]
         writeGlyphRecipe = True
 
         gIndex = ttfont.FindGlyph(gName)
@@ -403,9 +405,10 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, hintingDi
 
         t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) 
         # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
-        
+
         hintedNodesDict = {} # This dictionary is indexed by the node indexes of the template TT font
         gHintCommands = gHintString.split(';')
+
 
         for commandString in gHintCommands:
             commandList = list(eval(commandString))
@@ -432,14 +435,14 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, hintingDi
                         okToProcessTargetFonts = False
                         continue
 
-                    if node.type == nOFF: 
+                    if node.type == nOFF:
                         # Ignore off-curve nodes in TrueType, do not write glyph recipe to the output file
                         print "Node #%d in glyph %s is off-curve. Skipping glyph ..." % (hintedNodeIndex, gName)
                         writeGlyphRecipe = False
                         break
 
                     else:
-                        nodeCoords = "%s,%s" % (node.x, node.y)
+                        nodeCoords = (node.x, node.y)
                         if nodeCoords in t1GlyphNodeIndexDict:
                             t1NodeIndex = t1GlyphNodeIndexDict[nodeCoords]
                             hintedNode = MyHintedNode(node.x, node.y, hintedNodeIndex, t1NodeIndex)
@@ -454,13 +457,26 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, hintingDi
     return outputDict
 
 
-def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, hintingDict):
+def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
     newTTindexesList = []
-    templateTTdict = hintingDict[glyph.name]
+    templateTTdict = rawHintingDict[glyph.name]
 
     for templateTTindex in nodeIndexList:
         templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
-        targetT1nodeCoords = "%d,%d" % (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+        try:
+            targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+        except IndexError:
+            # Again, FontLab's fantastic ability to make a contour longer than it is, by re-inserting
+            # the first point a second time in position -1. In this case, the templateT1index is
+            # re-set to be the first point of the last contour, which makes no functional difference.
+            if templateT1index == len(glyph):
+                numberOfCountours = glyph.GetContoursNumber()
+                firstPointOfLastContour = glyph.GetContourBegin(numberOfCountours-1)
+                templateT1index = firstPointOfLastContour
+                targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+            else:
+                print 'I give up.'
+
         if targetT1nodeCoords in ttGlyphNodeIndexDict:
             newTTindexesList.append(ttGlyphNodeIndexDict[targetT1nodeCoords])
         else:
@@ -468,7 +484,7 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, hintingDict):
     return newTTindexesList
 
 
-def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, hintingDict):
+def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, rawHintingDict):
     totalFolders = len(folderPathsList)
     print "%d folders found" % totalFolders
     
@@ -511,7 +527,7 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
         filteredGlyphList = [gName for gName in glyphList if gName in hintedNodeDict]
 
         for gName in filteredGlyphList:
-            gHintString = hintingDict[gName]
+            gHintString = rawHintingDict[gName]
             gMark = None
     
             gIndex = targetT1font.FindGlyph(gName)
@@ -652,9 +668,9 @@ def run():
 
     '''
     Create a list of glyphs that have been hinted so it can be used as a filter.
-    The hintingDict contains a string of raw hinting data for each glyph:
+    The rawHintingDict contains a string of raw hinting data for each glyph:
     '''
-    glyphList, hintingDict = readTTHintsFile(tthintsFilePath)
+    glyphList, rawHintingDict = readTTHintsFile(tthintsFilePath)
 
 
     'Check if any of the possible template fonts exists -- PFA, TXT, or UFO:'
@@ -715,14 +731,11 @@ def run():
             g = currentT1RBfont[gName]
             templateT1RBfont.insertGlyph(g)
 
-        # templateGlyphNodeIndexDict contains glyph names as keys, and a list 
-        # of glyph hinting recipes, and count of hinted nodes.
-        # This global dict is now local, and has been renamed to hintedNodeDict.
-        hintedNodeDict = collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font, glyphList, hintingDict)
+        hintedNodeDict = collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font, glyphList, rawHintingDict)
         closeAllOpenedFonts()
         
         if okToProcessTargetFonts:
-            processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, hintingDict)
+            processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, rawHintingDict)
         else:
             print "Can't process target fonts because of hinting errors found in template font."
 

@@ -6,7 +6,7 @@ just run those scripts from FontLab as they are used to.
 
 At the time of writing (March 2015), there is a bug in OSX Yosemite, which makes 
 executing external code from FontLab difficult or even impossible. Since some of 
-these scripts call the `tx` and `ttx` commands, this is a problem.  
+these scripts call the `tx`, `ttx` and `type1` commands, this is a problem.  
 
 In-depth description of this issue:  
 http://forum.fontlab.com/index.php?topic=9134.0
@@ -23,14 +23,29 @@ Then the scripts should work as expected. Hopefully this OSX bug will be fixed s
 _FontLab menu name: **Output TrueType Hints**_  
 Writes a simple text file (`tthints`) which contains TrueType hinting 
 instructions for each selected glyph. 
-If the external file already exists, the script will replace 
-existing entries and add new ones. The script will emit 
-an error message if hints are attached to off-curve points.
+If the external file already exists, the script will replace existing 
+entries in that file, and/or add new ones. The script will emit an error 
+message if hints are attached to off-curve points.
+
+
+## `OutputTrueTypeHints_coords.py`
+_FontLab menu name: **Output TrueType Hints\_coords**_  
+Writes a simple text file (`tthints_coords`) which contains TrueType hinting 
+instructions for each selected glyph. Works exactly the same as the
+`OutputTrueTypeHints.py`, but writes the tuples of point coordinates instead
+of point indexes.
+This script imports `OutputTrueTypeHints.py` as a module.
 
 
 ## `InputTrueTypeHints.py`
 _FontLab menu name: **Input TrueType Hints**_  
 Reads an applies the contents of a `tthints` file to an open VFB.
+
+
+## `InputTrueTypeHints_coords.py`
+_FontLab menu name: **Input TrueType Hints\_coords**_  
+Reads an applies the contents of a `tthints_coords` file to an open VFB.
+This script imports `InputTrueTypeHints.py` as a module.
 
 
 ## `ConvertToTTFandVFB.py`
@@ -61,20 +76,16 @@ does not need any of the involved fonts to be open.
 
 ##### Important: 
 
-1. This script can only process anchors, single links, double links and 
-interpolations in vertical direction. Support for further TT instructions 
-could probably be added, but there was no need just yet.
-
-2. The script can only process TT instructions that are attached to *on-curve* 
+1. The script can only process TT instructions that are attached to *on-curve* 
 points, because those are the only ones that will have the same coordinates
 in both PS and TT outlines.
 
-3. It is expected that overlaps are removed in the source files. This
+2. It is expected that overlaps are removed in the source files. This
 ensures outline predictability.
 Depending on the drawing it can mean that there is some work to be done for 
 compatibilizing the outlines, which is usually less work than hinting.
 
-
+3. Hinting of sidebearings is currently not supported in the duplicator script.
 
 ##### Workflow:
 
