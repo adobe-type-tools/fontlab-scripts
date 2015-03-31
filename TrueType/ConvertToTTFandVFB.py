@@ -48,8 +48,6 @@ import re
 import sys
 import time
 
-import InputTrueTypeHints
-
 from FL import *
 import fl_cmd
 
@@ -58,6 +56,20 @@ try:
     dvModuleFound = True
 except:
     dvModuleFound = False
+
+
+def findModulePath(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root)
+
+modPath = findModulePath('InputTrueTypeHints.py', fl.usercommonpath)
+
+if not modPath in sys.path:
+    sys.path.append(modPath)
+
+
+import InputTrueTypeHints
 
 
 MAC = False
