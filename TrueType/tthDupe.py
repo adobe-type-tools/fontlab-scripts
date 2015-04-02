@@ -157,15 +157,17 @@ import itertools
 from FL import *
 from robofab.world import CurrentFont 
 from robofab.objects.objectsRF import RFont
-
-'The RFont object from robofab.world is not appropriate in this case, because it would create a new FL font.'
+'''(The RFont object from robofab.world is not appropriate \
+in this case, because it would create a new FL font.)'''
 
 fl.output = ''
 
 MAC = False
 PC  = False
-if sys.platform in ('mac', 'darwin'): MAC = True
-elif os.name == 'nt': PC = True
+if sys.platform in ('mac', 'darwin'): 
+    MAC = True
+elif os.name == 'nt': 
+    PC = True
 
 'Adding the FDK Path to the env variable (on Mac only) so that command line tools can be called from FontLab'
 if MAC:
@@ -175,6 +177,8 @@ if MAC:
     if fdkPathMac not in envPath:
         os.environ["PATH"] = newPathString
 
+if PC:
+    from subprocess import Popen, PIPE
 
 # numerical identifiers for different kinds of hints 
 vAlignLinkTop = 1
@@ -403,8 +407,8 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, rawHintin
             print "ERROR: Glyph %s not found in TT font." % gName
             continue
 
+        # This dictionary is indexed by the combination of the coordinates of each node of the current glyph:
         t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font) 
-        # This dictionary is indexed by the combination of the coordinates of each node of the current glyph
 
         hintedNodesDict = {} # This dictionary is indexed by the node indexes of the template TT font
         gHintCommands = gHintString.split(';')
@@ -466,6 +470,7 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
         try:
             targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
         except IndexError:
+            
             # Again, FontLab's fantastic ability to make a contour longer than it is, by re-inserting
             # the first point a second time in position -1. In this case, the templateT1index is
             # re-set to be the first point of the last contour, which makes no functional difference.
@@ -541,12 +546,12 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
             templateT1RBglyph = templateT1RBfont[gName]
             targetT1RBglyph = targetT1RBfont[gName]
             if not templateT1RBglyph.isCompatible(targetT1RBglyph, False): 
-                # (NOTE: This method doesn't catch the case where the node indexes have rotated)
+                # (NOTE: This method doesn't catch the case in which node indexes have rotated)
                 print "DEFINITELY NOT COMPATIBLE: %s. Skipping..." % gName
                 continue
     
             # Verify glyph compatibility by comparing the length of segments:
-            # Dictionaries of the coodinates of on-curve points:
+            # Create dictionaries of the coodinates of on-curve points:
             ptDict1 = getGlyphOncurveCoords(templateT1RBglyph) 
             ptDict2 = getGlyphOncurveCoords(targetT1RBglyph)
             # Define segments using the point coordinates from ptDict1 and ptDict2:
@@ -615,12 +620,9 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
 
 def makePFAfromTXT(txtFilePath, pfaFilePath):
-    if MAC:
-        type1Tool = "type1"
-    if PC:
-        type1Tool = "type1.exe"
+    'Runs the `type1` command on a font.txt file to generate a temporary PFA.'
 
-    command = "%s '%s' > '%s'" % (type1Tool, txtFilePath, pfaFilePath)
+    command = 'type1 "%s" > "%s"' % (txtFilePath, pfaFilePath)
     
     # Run type1 tool
     if MAC:
@@ -628,31 +630,38 @@ def makePFAfromTXT(txtFilePath, pfaFilePath):
         report = pp.read()
         pp.close()
     if PC:
-        pp = Popen(command)
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = pp.communicate()
+        if err:
+            print out, err
 
 
 def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
-    if MAC:
-        txTool = "tx"
-    if PC:
-        txTool = "tx.cmd"
+    'Runs the `tx` command on a UFO file to generate a temporary PFA.'
 
     if glyphList:
-        command = "%s -t1 -g %s '%s' > '%s'" % (txTool, ','.join(glyphList), ufoFilePath, pfaFilePath)
+        command = 'tx -t1 -g %s "%s" > "%s"' % (','.join(glyphList), ufoFilePath, pfaFilePath)
     else:
-        command = "%s -t1 '%s' > '%s'" % (txTool, ufoFilePath, pfaFilePath)
-    
+        command = 'tx -t1 "%s" > "%s"' % (ufoFilePath, pfaFilePath)
+        
+        # The order of the quotes above is extremely important.
+        # Windows will understand "File with spaces" but not 'File with spaces'.
+
     # Run tx tool
     if MAC:
         pp = os.popen(command)
         report = pp.read()
         pp.close()
     if PC:
-        pp = Popen(command)
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = pp.communicate()
+        if err:
+            print out, err
 
 
 def run():
-    'Get the folder that contains the source hinting data, and source font files.'
+    
+    # Get the folder that contains the source hinting data, and source font files:
     global templateFolderPath
     templateFolderPath = fl.GetPathName("Select directory that contains the 'tthints' template file...")
     if not templateFolderPath:
@@ -661,19 +670,16 @@ def run():
 
     tthintsFilePath = os.path.join(templateFolderPath, kTTHintsFileName)
 
-    'Verify that the files tthints, font.pfa/ufo and font.ttf exist in the folder provided:'
+    # Verify that the files tthints, font.pfa/ufo and font.ttf exist in the folder provided:
     if not os.path.exists(tthintsFilePath):
         print "ERROR: Could not find %s file." % kTTHintsFileName
         return
 
-    '''
-    Create a list of glyphs that have been hinted so it can be used as a filter.
-    The rawHintingDict contains a string of raw hinting data for each glyph:
-    '''
+    # Create a list of glyphs that have been hinted so it can be used as a filter.
+    # The rawHintingDict contains a string of raw hinting data for each glyph:
     glyphList, rawHintingDict = readTTHintsFile(tthintsFilePath)
 
-
-    'Check if any of the possible template fonts exists -- PFA, TXT, or UFO:'
+    # Check if any of the possible template fonts exists -- PFA, TXT, or UFO:
     pfaFilePath = os.path.join(templateFolderPath, kPFAFileName)
     txtFilePath = os.path.join(templateFolderPath, kTXTFileName)
     ufoFilePath = os.path.join(templateFolderPath, kUFOFileName)
@@ -689,15 +695,13 @@ def run():
             (kPFAFileName, kTXTFileName, kUFOFileName)
         return
 
-
-    'Check if font.ttf exists in source folder:'
+    # Check if font.ttf exists in source folder:
     ttfFilePath = os.path.join(templateFolderPath, kTTFFileName)
     if not os.path.exists(ttfFilePath):
         print "ERROR: Could not find %s file." % kTTFFileName
         return
 
-
-    'Get the (root) folder containingt the target font files:'
+    # Get the (root) folder containingt the target font files:
     baseFolderPath = fl.GetPathName("Select top directory that contains the fonts to process ...")
     if not baseFolderPath:
         'Cancel was clicked or ESC key was pressed'
@@ -720,6 +724,7 @@ def run():
             makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList)
         fl.Open(pfaFilePath)
         templateT1font = fl[fl.ifont]
+
         # Make a Robofab font of the Type1 template font. This RB font is made 
         # by copying each glyph. There does not seem to be a simpler method 
         # that produces reliable results -- the challenge comes from having 
