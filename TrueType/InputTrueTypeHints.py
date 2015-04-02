@@ -111,7 +111,8 @@ def transformCommandList(glyph, raw_commandList):
 
 	'''
 
-	pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
+	# pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
+	pointDict = dict(((point.x, point.y), pointIndex) for pointIndex, point in enumerate(glyph.nodes))
 
 	output = []
 	for item in raw_commandList:
