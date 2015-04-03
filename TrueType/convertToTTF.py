@@ -59,7 +59,7 @@ except:
 
 fl.output = ''
 
-# Find and import InputTrueTypeHints module:
+# Find and import inputTTHints module:
 
 def findFile(fileName, path):
     'Find file of given fileName, starting at path.'
@@ -69,7 +69,7 @@ def findFile(fileName, path):
     else:
         return None
 
-moduleName = 'InputTrueTypeHintsx.py'
+moduleName = 'inputTTHints.py'
 customModulePathMAC = os.path.join('~', 'Library', 'Application Support', 'FontLab', 'Studio 5', 'Macros')
 customModulePathPC = os.path.join('~', 'Documents', 'FontLab', 'Studio5', 'Macros')
 
@@ -95,7 +95,7 @@ else:
     if not modPath in sys.path:
         sys.path.append(modPath)
 
-    import InputTrueTypeHints
+    import inputTTHints
 
 
 MAC = False
@@ -765,7 +765,7 @@ def processFonts(fontsList):
 
         tthintsFilePath = os.path.join(folderPath, kTTHintsFileName)
         if os.path.exists(tthintsFilePath):
-            InputTrueTypeHints.run(folderPath, coord_option=False)
+            inputTTHints.run(folderPath, coord_option=False)
             # readTTHintsFile(tthintsFilePath)
             # replaceTTHints()
          

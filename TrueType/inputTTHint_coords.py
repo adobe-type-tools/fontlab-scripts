@@ -1,4 +1,4 @@
-#FLM: Output TrueType Hints_coords
+#FLM: Input TrueType Hints_coords
 # -*- coding: utf-8 -*-
 
 import os
@@ -9,11 +9,10 @@ def findFile(fileName, path):
     for root, dirs, files in os.walk(path):
         if fileName in files:
             return os.path.join(root)
-            break
     else:
         return None
 
-moduleName = 'OutputTrueTypeHints.py'
+moduleName = 'inputTTHints.py'
 customModulePathMAC = os.path.join('~', 'Library', 'Application Support', 'FontLab', 'Studio 5', 'Macros')
 customModulePathPC = os.path.join('~', 'Documents', 'FontLab', 'Studio5', 'Macros')
 
@@ -39,5 +38,5 @@ else:
     if not modPath in sys.path:
         sys.path.append(modPath)
 
-    import OutputTrueTypeHints
-    OutputTrueTypeHints.preRun(coord_option=True)
+    import inputTTHints
+    inputTTHints.preRun(coord_option=True)
