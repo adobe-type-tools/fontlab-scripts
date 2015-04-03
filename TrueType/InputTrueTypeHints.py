@@ -263,7 +263,7 @@ def run(parentDir, coord_option):
 	
 	if len(ttHintsList):
 		applyTTHints(ttHintsList)
-		print "Done!"
+		print "TT hints added."
 	else:
 		print "The %s file at %s has no hinting data." % (kTTHintsFileName, tthintsFilePath)
 		return

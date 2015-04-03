@@ -303,8 +303,6 @@ def getFolderPaths(path, templatePath):
     return folderPathsList
 
 
-
-
 def saveNewTTHintsFile(folderPath, contentList):
     filePath = os.path.join(folderPath, kTTHintsFileName)
     outfile = open(filePath, 'w')
@@ -751,7 +749,6 @@ def run():
     else:
         print "Could not find suitable folders to process."
     
-
     endTime = time.time()
     elapsedSeconds = endTime-startTime
     

@@ -4,9 +4,10 @@
 import os
 import sys
 
-def findModulePath(moduleName, path):
+def findFile(fileName, path):
+    'Find file of given fileName, starting at path.'
     for root, dirs, files in os.walk(path):
-        if moduleName in files:
+        if fileName in files:
             return os.path.join(root)
     else:
         return None
@@ -21,7 +22,7 @@ possibleModulePaths = [fl.userpath, customModulePathMAC, customModulePathPC]
 
 print '\nLooking for %s ... ' % (moduleName)
 for path in possibleModulePaths:
-    modPath = findModulePath(moduleName, path)
+    modPath = findFile(moduleName, path)
     if modPath:
         print 'found at %s' % modPath
         break
