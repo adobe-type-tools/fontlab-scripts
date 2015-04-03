@@ -1,7 +1,8 @@
 #FLM: Input TrueType Hints
+# coding: utf-8
 
 __copyright__ = __license__ =  """
-Copyright (c) 2013 Adobe Systems Incorporated. All rights reserved.
+Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"), 
@@ -15,28 +16,28 @@ all copies or substantial portions of the Software.
  
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Input TrueType Hints v1.3 - Mar 24 2015
+Input TrueType Hints
 
-This FontLab macro will read an external simple text file containing
-TrueType instructions for each glyph, and will apply that data to the
-glyphs. The hints can be further edited and written out using the macro
-named "Output TrueType Hints".
+This FontLab macro will read an external simple text file `tthints` containing
+TrueType instructions and hinted point indexes for a number of glyphs, and 
+will apply this data to the glyphs of an open VFB.
 
 ==================================================
 Versions:
 
-v1.3 - Mar 24 2015 - Enable reading file with coordinates
-v1.2 - Mar 23 2015 - Enable instructions in x-direction
-v1.1 - Sep 07 2013 - Enabled the reading of 'tthints' files with an optional column for glyph color mark
-v1.0 - Jan 07 2013 - Initial release
+v1.3 - Mar 24 2015 - Enable reading tthints_coords file with coordinates.
+v1.2 - Mar 23 2015 - Enable instructions in x-direction.
+v1.1 - Sep 07 2013 - Enable the reading of 'tthints' files with an optional 
+					 column for glyph color mark.
+v1.0 - Jan 07 2013 - Initial release.
 """
 
 #----------------------------------------
@@ -70,7 +71,6 @@ alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 import os
 from FL import *
 
-
 def readTTHintsFile(filePath):
 	file = open(filePath, "r")
 	data = file.read()
@@ -92,7 +92,6 @@ def readTTHintsFile(filePath):
 			ttHintsList.append(line)
 	
 	return ttHintsList
-
 
 
 def transformCommandList(glyph, raw_commandList):
@@ -136,7 +135,6 @@ def transformCommandList(glyph, raw_commandList):
 		return []
 	else:
 		return output
-
 
 
 def applyTTHints(ttHintsList):
@@ -245,9 +243,7 @@ def applyTTHints(ttHintsList):
 		fl.font.modified = 1
 
 
-
 def run(parentDir, coord_option):
-
 	if coord_option:
 		kTTHintsFileName = "tthints_coords"
 	else:
@@ -291,7 +287,6 @@ def preRun(coord_option=False):
 		return
 	
 	run(parentDir, coord_option)
-
 
 
 if __name__ == "__main__":

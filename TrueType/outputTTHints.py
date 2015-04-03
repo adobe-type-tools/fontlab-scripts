@@ -2,7 +2,7 @@
 # coding: utf-8
 
 __copyright__ = __license__ =  """
-Copyright (c) 2013, 2015 Adobe Systems Incorporated. All rights reserved.
+Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"), 
@@ -16,24 +16,28 @@ all copies or substantial portions of the Software.
  
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
-Output TrueType Hints v1.3 - Mar 25 2015
+Output TrueType Hints
 
-This FontLab macro will write a simple text file containing
-TrueType instructions for each selected glyph. If the external file
-already exists, the script will replace the existing entries and add
-new entries as needed. The hinting data can be loaded back into the 
-font by using the macro named "Input TrueType Hints".
+This FontLab macro will write a simple text file `tthints` which contains 
+TrueType instructions and point indexes for each selected glyph. 
+If the external file already exists, the script will replace the existing 
+entries and add new entries as needed. 
 
 The script will emit an error if there are hints attached to off-curve
-points.
+points, but will still write those hints.
+
+Example output:
+n	5,13,14,1;5,22,0,1;1,9,0;1,2,0;2,0,0;2,14,0;14,4,9,0,0;4,9,18,0,-1;14,21,18,0,0
+o	5,33,5,0;5,13,23,0;1,10,0;2,0,0;4,0,18,0,-1;4,10,28,0,-1
+
 
 ==================================================
 Versions:
@@ -69,12 +73,10 @@ interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
 alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
-
 listGlyphsSelected = []
 def getgselectedglyphs(font, glyph, gindex):
 	listGlyphsSelected.append(glyph.name)
 fl.ForSelected(getgselectedglyphs)
-
 
 allGlyphsHintList = ["# Glyph name\tTT hints\n"]
 
@@ -102,12 +104,10 @@ def readTTHintsFile(filePath):
 	return ttHintsList
 
 
-
 def writeTTHintsFile(content, filePath):
 	outfile = open(filePath, 'w')
 	outfile.writelines(content)
 	outfile.close()
-
 
 
 ttHintsGlyphNamesList = []
@@ -127,7 +127,6 @@ def processTTHintsFileData(ttHintsList):
 	
 	return ttHintsDict
 
-	
 
 def analyzePoint(glyph, nodeIndex):
 	'''Analyzes a given point for a given glyph.
@@ -169,7 +168,6 @@ def analyzePoint(glyph, nodeIndex):
 		print "\tERROR: Off-curve point %s hinted in glyph %s." % (point_coordinates, gName)
 
 	return nodeIndex, point_coordinates
-
 
 
 def collectInstructions(tth, gName, coord_option):
@@ -259,7 +257,6 @@ def collectInstructions(tth, gName, coord_option):
 		return index_commandsList
 
 
-
 def processGlyphs(ttHintsDict, coord_option):
 	# Iterate through all the glyphs instead of just the ones selected.
 	# This way the order of the items in the output file will be constant and predictable.
@@ -280,9 +277,7 @@ def processGlyphs(ttHintsDict, coord_option):
 				allGlyphsHintList.append(ttHintsDict[gName] + '\n')
 
 
-
 def run(parentDir, coord_option):
-
 	if coord_option:
 		kTTHintsFileName = "tthints_coords"
 	else:
@@ -320,7 +315,6 @@ def run(parentDir, coord_option):
 		print "File %s was saved at %s" % (kTTHintsFileName, tthintsFilePath)
 	
 	print "Done!"
-		
 
 
 def preRun(coord_option=False):
@@ -344,7 +338,6 @@ def preRun(coord_option=False):
 		return
 	
 	run(parentDir, coord_option)
-
 
 
 if __name__ == "__main__":

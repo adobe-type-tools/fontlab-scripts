@@ -2,7 +2,6 @@
 # coding: utf-8
 
 __copyright__ = __license__ =  """
-
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
  
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -17,45 +16,60 @@ all copies or substantial portions of the Software.
  
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 DEALINGS IN THE SOFTWARE.
 
 """
 
-
 __doc__ = u'''
+TT Hints Duplicator
 
-DESCRIPTION:
-------------
+This script was written to duplicate TT hinting data across compatible styles 
+of a typeface family, cutting the time needed for TT hinting by a significant
+amount. The script is run as a FontLab macro, and does not need any of the 
+involved fonts to be open.
 
-This script was created to duplicate TT hints information across compatible
-styles of a typeface, cutting the time needed for TT hinting by a significant
-amount. The script is to be run from within FontLab, and does not need any
-of the involved fonts to be open.
+The script duplicates `tthints` files by reading information from the source 
+`tthints` file and associated fonts, and comparing this data to the target 
+fonts. It will not modify source- or taget fonts in any way. 
+
+The script is smart enough to not re-process the source folder, so it is safe 
+to pick the root of a font project as the target directory.
 
 
-
-IMPORTANT: 
-----------
-
+Note: 
 1) 
-This script will not process delta-hints.
+This script will not process Delta hints. If Delta hints are present in a 
+glyph, an error message will be output, and the Delta hints omitted from the 
+output `tthints` file.
 
 2)
 The script can only process TT instructions that are attached to *on-curve* 
 points, because those are the only ones that will have the same coordinates
-in both PS and TT outlines.
+in both PS and TT outlines. If there are hints attached to off-curve points, 
+the whole glyph will be omitted from the output `tthints` file.
 
 3)
-It is expected that overlaps are removed in the source CFF and TTF files. This
-ensures outline predictability.
+It is expected that overlaps are removed in the source CFF and TTF files. 
+This ensures outline predictability.
 Depending on the drawing it can mean that there is some work to be done for 
 compatibilizing the outlines, which is usually less work than re-hinting.
 
+4)
+Duplicating horizontal sidebearing-hints is not supported at this time.
 
+
+==================================================
+Versions:
+
+v1.3 - Apr 02 2015 - Now also works in FL Windows. 
+v1.2 - Mar 29 2015 - Speed improvement by reading/writing only glyphs listed 
+                     in the tthints file.
+v1.1 - Mar 23 2015 - Support duplication of instructions in both directions.
+v1.0 - Mar 04 2015 - First public release (Robothon 2015).
 '''
 
 
@@ -118,7 +132,6 @@ kUFOFileName = "font.ufo"
 kTTHintsFileName = "tthints"
 
 okToProcessTargetFonts = True
-
 
 
 # -----------

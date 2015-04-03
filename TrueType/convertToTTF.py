@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 __doc__ = """
+Convert PFA/UFO/TXT to TTF/VFB
 
 This FontLab script will convert one or more hinted PFA/UFO or TXT files
 into TTF files, for use as input for makeOTF.
@@ -33,11 +34,17 @@ process all input files it finds. In addition to the directory, the script
 will also ask for an encoding file. This encoding file is a FontLab '.enc'
 file which the script will use for ordering the glyphs.
 
+Note:
+This script imports the `Input TrueType Hints` script, therefore needs to be 
+run from the same folder.
+
 ==================================================
 
 Versions:
 
-v1.2 - Mar 26 2015 - Move TT hint file reading code to adjacent module.
+v1.3 - Apr 02 2015 - Now also works properly on FL Windows. 
+v1.2 - Mar 26 2015 - Move code reading external `tthints` file to an adjacent 
+                     module.
 v1.1 - Mar 23 2015 - Allow instructions in x-direction.
 v1.0 - Mar 04 2015 - Initial public release (Robothon 2015).
 
