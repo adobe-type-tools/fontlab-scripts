@@ -1,4 +1,4 @@
-#FLM: Export PPMs
+#FLM: Output PPMs
 
 """
 This script will write (or overwrite) a 'ppms' file in the same directory 
