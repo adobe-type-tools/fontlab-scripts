@@ -71,11 +71,13 @@ if not modPath in sys.path:
 
 import InputTrueTypeHints
 
-
+fl.output = ''
 MAC = False
 PC  = False
-if sys.platform in ('mac', 'darwin'): MAC = True
-elif os.name == 'nt': PC = True
+if sys.platform in ('mac', 'darwin'): 
+    MAC = True
+elif os.name == 'nt': 
+    PC = True
 
 
 # Adding the FDK Path to the env variable (on Mac only) so 
@@ -87,6 +89,8 @@ if MAC:
     if fdkPathMac not in envPath:
         os.environ["PATH"] = newPathString
 
+if PC:
+    from subprocess import Popen, PIPE
 
 # constants:
 kNULLglyphName   = "NULL"
@@ -507,17 +511,17 @@ def postProccessTTF(ttFont):
     kPrepTableFind = """WCVTP[ ]\t/* WriteCVTInPixels */\n    </assembly>"""
     kPrepTableReplace = """WCVTP[ ]\t/* WriteCVTInPixels */\n      MPPEM[ ]\n      PUSHW[ ]\t/* 1 value pushed */\n      96\n      GT[ ]\n      IF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      ELSE[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      0\n      EIF[ ]\n      PUSHB[ ]\t/* 1 value pushed */\n      1\n      INSTCTRL[ ]\n    </assembly>"""
 
-    if MAC:
-        ttxTool = "ttx"
-    if PC:
-        ttxTool = "ttx.cmd"
-
-    command = "%s -t GlyphOrder -t post -t prep '%s'" % (ttxTool, ttFont)
+    command = 'ttx -t GlyphOrder -t post -t prep "%s"' % (ttFont)
 
     # Run TTX to get GlyphOrder, `post` table and `prep` table
-    pp = os.popen(command)
-    report = pp.read()
-    pp.close()
+    if MAC:
+        pp = os.popen(command)
+        report = pp.read()
+        pp.close()
+    if PC:
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        report = '\n'.join(pp.communicate())
+
     
     # Get TTX file name (on Windows, the file name is hard-coded)
     m = re.search(r"to\s+\"([^\"]+)\"", report) # ttx message: Dumping "font.ttf" to "font.ttx"...
@@ -555,13 +559,17 @@ def postProccessTTF(ttFont):
     fp.write(ttxData)
     fp.close()
 
-    command = "%s -m '%s' '%s'" % (ttxTool, ttFont, ttxFont)
+    command = 'ttx -m "%s" "%s"' % (ttFont, ttxFont)
 
     # Merge changes into TT font
-    pp = os.popen(command)
-    report = pp.read()
-    pp.close()
-    
+    if MAC:
+        pp = os.popen(command)
+        report = pp.read()
+        pp.close()
+    if PC:
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        report = '\n'.join(pp.communicate())
+
     # Delete files
     # os.remove(ttFont) # This is the original TT font
     os.remove(ttxFont) # This is the temporary TTX file
@@ -574,6 +582,9 @@ def postProccessTTF(ttFont):
 
     newTTFName = m.group(1) # file name of new TT file, usually 'font#1.ttf'
     if newTTFName != ttFont:
+        if PC:
+            # On Windows, a file cannot be overwritten if it already exists.
+            os.remove(ttFont)
         os.rename(newTTFName, ttFont) # Renames the new file
     
     # Return if successful
@@ -583,12 +594,7 @@ def postProccessTTF(ttFont):
 def convertTXTfontToPFA(txtPath):
     tempPFApath = txtPath.replace('.txt','_TEMP_.pfa')
     
-    if MAC:
-        type1Tool = "type1"
-    if PC:
-        type1Tool = "type1.exe"
-
-    command = "%s '%s' > '%s'" % (type1Tool, txtPath, tempPFApath)
+    command = 'type1 "%s" > "%s"' % (txtPath, tempPFApath)
     
     # Run type1 tool
     if MAC:
@@ -596,7 +602,10 @@ def convertTXTfontToPFA(txtPath):
         report = pp.read()
         pp.close()
     if PC:
-        pp = Popen(command)
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = pp.communicate()
+        if err:
+            print out, err
     
     return tempPFApath
 
@@ -604,12 +613,7 @@ def convertTXTfontToPFA(txtPath):
 def convertUFOfontToPFA(ufoPath):
     tempPFApath = ufoPath.replace('.ufo','_TEMP_.pfa')
     
-    if MAC:
-        txTool = "tx"
-    if PC:
-        txTool = "tx.cmd"
-
-    command = "%s -t1 '%s' > '%s'" % (txTool, ufoPath, tempPFApath)
+    command = 'tx -t1 "%s" > "%s"' % (ufoPath, tempPFApath)
     
     # Run tx tool
     if MAC:
@@ -617,8 +621,11 @@ def convertUFOfontToPFA(ufoPath):
         report = pp.read()
         pp.close()
     if PC:
-        pp = Popen(command)
-    
+        pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        out, err = pp.communicate()
+        if err:
+            print out, err
+
     return tempPFApath
 
 
@@ -765,10 +772,17 @@ def processFonts(fontsList):
                 os.remove(pfaPath)
             if os.path.exists(ttfPath):
                 finalTTFpath = ttfPath.replace('_TEMP_.ttf','.ttf')
-                os.rename(ttfPath, finalTTFpath)
+                if finalTTFpath != ttfPath:
+                    if PC:
+                        os.remove(finalTTFpath)
+                    os.rename(ttfPath, finalTTFpath)
+
             if os.path.exists(vfbPath):
                 finalVFBpath = vfbPath.replace('_TEMP_.vfb','.vfb')
-                os.rename(vfbPath, finalVFBpath)
+                if finalVFBpath != vfbPath:
+                    if PC:
+                        os.remove(finalVFBpath)
+                    os.rename(vfbPath, finalVFBpath)
 
 
 def run():
