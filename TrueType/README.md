@@ -1,12 +1,24 @@
-FontLab scripts for TrueType
-====
-### IMPORTANT:
-Users running OS 10.10 _Yosemite_ will run into several problems when trying to 
-just run those scripts from FontLab as they are used to. 
+#FontLab scripts for TrueType
 
-At the time of writing (March 2015), there is a bug in OSX Yosemite, which makes 
-executing external code from FontLab difficult or even impossible. Since some of 
-these scripts call the `tx`, `ttx` and `type1` commands, this is a problem.  
+These scripts all are tailored to a TrueType hinting workflow that invoves FontLab.
+Successfully tested in the following versions of FL:
+
+- FontLab 5.1.2 Build 4447 (Mac)
+- FontLab 5.2.1 Build 4868 (Win)
+
+Dependencies (for `tthDupe.py`):
+
+- Robofab
+- FontTools (`ttx`)
+
+## IMPORTANT
+Mac users running OS 10.10 _Yosemite_ will run into several problems 
+when trying to run those scripts from FontLab as they are used to. 
+
+At the time of writing (April 2015), there is a bug in OSX Yosemite, which 
+makes executing external code from FontLab difficult or even impossible. 
+Since some of these scripts call the external `tx`, `ttx` and `type1` commands, 
+this is a problem.  
 
 In-depth description of this issue:  
 http://forum.fontlab.com/index.php?topic=9134.0
@@ -15,147 +27,236 @@ An easy workaround is launching FontLab from the command line, like this:
 
     open "/Applications/FontLab Studio 5.app"
 
-Then the scripts should work as expected. Hopefully this OSX bug will be fixed soon.
-
-====
-
-## `OutputTrueTypeHints.py`
-_FontLab menu name: **Output TrueType Hints**_  
-Writes a simple text file (`tthints`) which contains TrueType hinting 
-instructions for each selected glyph. 
-If the external file already exists, the script will replace existing 
-entries in that file, and/or add new ones. The script will emit an error 
-message if hints are attached to off-curve points.
+The scripts should then work as expected.  
 
 
-## `OutputTrueTypeHints_coords.py`
-_FontLab menu name: **Output TrueType Hints\_coords**_  
-Writes a simple text file (`tthints_coords`) which contains TrueType hinting 
-instructions for each selected glyph. Works exactly the same as the
-`OutputTrueTypeHints.py`, but writes the tuples of point coordinates instead
-of point indexes.
-This script imports `OutputTrueTypeHints.py` as a module.
-
-
-## `InputTrueTypeHints.py`
-_FontLab menu name: **Input TrueType Hints**_  
-Reads an applies the contents of a `tthints` file to an open VFB.
-
-
-## `InputTrueTypeHints_coords.py`
-_FontLab menu name: **Input TrueType Hints\_coords**_  
-Reads an applies the contents of a `tthints_coords` file to an open VFB.
-This script imports `InputTrueTypeHints.py` as a module.
-
-
-## `ConvertToTTFandVFB.py`
-_FontLab menu name: **Convert PFA/UFO/TXT to TTF/VFB**_  
-Reads an UFO, PFA, or TXT font file and outputs both a raw `font.ttf` 
-file and a `font.vfb` file. Those files may contain TT hints, 
-which come from an automatic conversion of contained PS hints.  
-Therefore, it is recommended to `autohint` the input file before 
-starting the TTF work.
-
-##### Workflow:
-`ConvertToTTFandVFB.py` is called in two situations: 
-
-- When the process of manual TT hinting starts, to create FontLab files to work with
-- When the manual TT hinting is done, and `tthints` files have been 
-exported. When re-run, the script will read and apply any adjacent `tthints` files 
-to both the VFB and raw TTF file. After the hints have been applied the raw TTF file 
-can be passed to `makeotf` to create a final TTF font.
-
-
-## `tthDupe.py`
-_FontLab menu name: **TT Hints Duplicator**_  
-FL Macro to duplicate `tthints` files across compatible styles.
-This script was created with re-using existing hinting patterns across 
-different weights, cutting the time investment for TT hinting by a 
-significant amount. The script is to be run from within FontLab, and 
-does not need any of the involved fonts to be open.
-
-##### Important: 
-
-1. The script can only process TT instructions that are attached to *on-curve* 
-points, because those are the only ones that will have the same coordinates
-in both PS and TT outlines.
-
-2. It is expected that overlaps are removed in the source files. This
-ensures outline predictability.
-Depending on the drawing it can mean that there is some work to be done for 
-compatibilizing the outlines, which is usually less work than hinting.
-
-3. Hinting of sidebearings is currently not supported in the duplicator script.
-
-##### Workflow:
+## Workflow
 
 This workflow relies on the Adobe style for building fonts, which means using
-a tree of folders, with one folder per style. In those folders, various files
-are expected:
-
-- one source file per folder, which has CFF (PS) outlines.        
-  Multiple formats are possible: `font.ufo` or `font.pfa` or `font.txt`
-  
-- one file per folder with TTF outlines, created running `convertToTTFandVFB.py`,
-  named `font.ttf`
-
-- one template `tthints` file, which is created by hinting one style,
-  and exporting the hints with e.g. `OutputTrueTypeHints.py`
-
-- a `GlyphOrderAndAliasDB` file in the root folder, which mostly is a two-column 
-  text file, and contains tab-separated columns for final name and production name.
+a tree of folders, with one folder per style.
 
 
-An example tree could look like this – in this case, the source files are UFOs,
-and the Regular VFB file has been hinted by hand. Then, a `tthints` file has been 
-exported in the Regular folder:
+#### Step 1
+The source files are UFOs. 
+A `GlyphOrderAndAliasDB` file has been created in the root folder, which 
+is a text file with (in most cases) two tab-separated columns. Those columns 
+contain final glyph name and production glyph name for each glyph in the font. 
+
+    Roman
+        ├─ GlyphOrderAndAliasDB
+        │
+        ├─ Light
+        │   └─ font.ufo
+        │
+        ├─ Regular
+        │   └─ font.ufo
+        │
+        └─ Bold
+            └─ font.ufo
+
+
+#### Step 2
+Run `convertToTTF.py` in Regular folder to get a VFB with TT outlines and a 
+`font.ttf` file.
+
+    Regular
+        ├─ font.ttf
+        ├─ font.ufo
+        └─ font.vfb
+
+
+#### Step 3
+Hint the VFB file in FontLab, export the hints via `outputTTHints.py`, and 
+export ppms via `outputPPMs.py`. This creates two new files, for storing 
+this data externally. 
+
+    Regular
+        ├─ font.ttf
+        ├─ font.ufo
+        ├─ font.vfb
+        ├─ ppms
+        └─ tthints
+
+
+#### Step 4
+If you don’t trust this script, this is a good time to create a backup copy of 
+your hinted VFB. 
+
+Then, run `convertToTTF.py` again; this time pick the root folder of your 
+font project. This will result in new `font.vfb` and `font.ttf` files for 
+each folder. If the conversion script finds `tthints` and `ppms` files in 
+any of the folders, they are applied to the newly-generated VFB and TTF.
 
     Roman
         ├─ GlyphOrderAndAliasDB
         │
         ├─ Light
         │   ├─ font.ttf
-        │   └─ font.ufo
+        │   ├─ font.ufo
+        │   └─ font.vfb
         │
         ├─ Regular
         │   ├─ font.ttf
         │   ├─ font.ufo
         │   ├─ font.vfb
+        │   ├─ MyFont_backup.vfb
+        │   ├─ ppms
         │   └─ tthints
         │
         └─ Bold
             ├─ font.ttf
-            └─ font.ufo
+            ├─ font.ufo
+            └─ font.vfb
 
 
+#### Step 5
+If outlines are compatible across weights, you can duplicate the TrueType hints 
+with `tthDupe.py`. Note: outline compatibility must be given **with overlaps 
+removed!** Run the script from FontLab, and first pick your template folder 
+(in this case _Regular_), and then the root folder (in this case _Roman_).
 
-Running this script on the Roman folder will generate `tthints` files for all the other styles 
-within the same (compatible) family, which can then be applied via `InputTrueTypeHints.py`, 
-or “sucked up” when processing with `convertToTTFandVFB.py`.
+The script creates new tthints files in each of the non-template folders: 
+
+    Roman
+        ├─ GlyphOrderAndAliasDB
+        │
+        ├─ Light
+        │   ├─ font.ttf
+        │   ├─ font.ufo
+        │   ├─ font.vfb
+        │   └─ tthints
+        │
+        ├─ Regular
+        │   ├─ font.ttf
+        │   ├─ font.ufo
+        │   ├─ font.vfb
+        │   ├─ MyFont_backup.vfb
+        │   ├─ ppms
+        │   └─ tthints
+        │
+        └─ Bold
+            ├─ font.ttf
+            ├─ font.ufo
+            ├─ font.vfb
+            └─ tthints
 
 
+#### Step 6
+Those new `tthints` files can be applied to new VFBs, again by running 
+`convertToTTF.py`. It is likely that some errors happen during the conversion, 
+so it is recommeded to check the new VFBs and improve the tthints files for each 
+style. The script `outputTTHints.py` helps with that, it will modify but not 
+overwrite extend the existing `tthints` file. 
+It is also recommended to check, adjust and export `ppms` for each style.
+
+
+#### Step 7
+When all `tthints` and `ppms` are perfect, we can create final `font.ttf` files 
+for the whole project with `convertToTTF.py`. Then, those `font.ttf` are used to 
+build the final, manually hinted TT fonts:
+
+    makeotf -f font.ttf
+
+----
 
 ##### Background Info:
 
 When PS outlines are converted to TT outlines, the number of points for a given
 glyph is not always the same for all instances (even when generated from the
-same, compatible masters), because curve segments can be described with almost any number 
-of off-curve points. As a result, the `tthints` files created for one instance cannot simply 
-be reused as they are with any another instance, even though the structure is similar.  
-What this script does is taking a note of points which TT instructions are attached to, 
-and correlate them with the points in the original PS font. This info can be used for 
-finding new point indexes for any given on-curve point in a related TrueType instance.
+same, compatible masters). TT curve segments can be described with almost any 
+number of off-curve points. As a result, the `tthints` files created for
+one instance cannot simply  b reused as they are with any another instance,
+even though the structure is similar. 
+What `tthDupe.py` does is taking a note of the (on-curve) points TT instructions
+are attached to, to correlate them with the points in the original PS font. 
+This information can be used for finding new point indexes in a related TrueType 
+instance.
 
 
 See the Robothon 2012 talk on this problem here:  
 [PDF slides with comments](http://typekit.files.wordpress.com/2012/04/truetype_hinting_robothon_2012.pdf) or [Video](http://vimeo.com/38352194)
 
+See the Robothon 2015 talk explaining the TT workflow here:  
+[Video](https://vimeo.com/album/3329572/video/123813230)
 
 
-##### Known Issues: 
+## Scripts
+
+### `convertToTTF.py`
+_FontLab menu name: **Convert PFA/UFO/TXT to TTF/VFB**_  
+Reads an UFO, PFA, or TXT font file and outputs both a raw `font.ttf`  file and 
+a `font.vfb` file. Those files may contain TT hints, which come from a 
+conversion of PS hints. Therefore, it is recommended to `autohint` the input 
+file before starting the TT conversion.  
+If the script finds any `tthints` and `ppms` files the folder of the source file, 
+this information is read and applied to output files.
+
+### `inputTTHints.py`
+_FontLab menu name: **Input TrueType Hints**_  
+Reads an applies the contents of a `tthints` file to an open VFB.
 
 
-`os.popen` is used to call `tx` and `ttx`.
-It is true -- `os.popen` is deprecated; but any attempt to modernize this part
-of the code just resulted in horrible crashes and (no kidding) kernel panics.
+### `inputTTHints_coords.py`
+_FontLab menu name: **Input TrueType Hints\_coords**_  
+Reads and applies the contents of a `tthints_coords` file to an open VFB.  
+This script imports `inputTTHints.py` as a module and therefore needs to be in
+the same folder.
+
+
+### `outputPPMs.py`
+_FontLab menu name: **Output PPMs**_  
+Output PPMs (stem pixel jumps) as a simple `ppms` text file.
+
+
+### `outputTTHints.py`
+_FontLab menu name: **Output TrueType Hints**_  
+Reads TT hints for selected glyphs and writes them to a simple `tthints` text
+file. The script will read all possible hinting instructions in both directions,
+and export all hints, also the hints attached to off-curve points. The idea is 
+duplicating all FL hinting data in an external backup file.
+
+If the external file already exists, the script will replace existing 
+entries in that file, and/or add new ones. The script will emit an error 
+message if hints are attached to off-curve points, but still write them. 
+
+
+### `outputTTHints_coords.py`
+_FontLab menu name: **Output TrueType Hints\_coords**_  
+Like `outputTTHints.py`, but instead of point indexes, coordinates are written. 
+This script can be useful in the case that a TTF-VFB file has been created 
+without the `convertToTTF.py` script (for instance directly in FontLab).
+Since `convertToTTF.py` makes some outline corrections, those outlines might not 
+perfectly match the previous conversion. Basically, this is an attempt to save 
+any hinting work that needs to be used in this workflow. 
+Writes a `tthints_coords` file. 
+
+This script imports `outputTTHints.py` as a module and therefore needs to be in 
+the same folder.
+
+
+### `tthDupe.py`
+_FontLab menu name: **TT Hints Duplicator**_  
+Macro to duplicate `tthints` files across compatible styles. The script was
+created with the idea of re-using existing hinting patterns across different
+weights, cutting the time investment for TT hinting by a significant amount.
+The script is to be run from within FontLab, and does not need any of the
+involved fonts to be open.
+
+__Important__: 
+
+1. `tthDupe.py` can only process TT instructions that are attached to *on-curve* 
+points, because those are the only ones that will have the same coordinates
+in both PS and TT outlines. Source glyphs that have instructions attached to 
+off-curve points will be dropped from the resulting `tthints` files.
+
+2. The script will not duplicate Delta hints (by design), because Deltas are 
+size- and style specific. They will simply be left out of the resulting `tthints` 
+files. All the remaining hints of the glyph will be written. 
+
+3. It is expected that overlaps are removed in the source files. This ensures 
+outline predictability. Depending on the drawing, this can mean some work for 
+compatibilizing all outlines, which is usually less work than hinting.
+
+3. Hinting of sidebearings is currently not supported in the duplicator script.
+
 
