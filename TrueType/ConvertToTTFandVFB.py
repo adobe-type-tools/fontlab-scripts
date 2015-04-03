@@ -57,21 +57,47 @@ try:
 except:
     dvModuleFound = False
 
-
-def findModulePath(name, path):
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            return os.path.join(root)
-
-modPath = findModulePath('InputTrueTypeHints.py', fl.usercommonpath)
-
-if not modPath in sys.path:
-    sys.path.append(modPath)
-
-
-import InputTrueTypeHints
-
 fl.output = ''
+
+# Find and import InputTrueTypeHints module:
+
+def findFile(fileName, path):
+    'Find file of given fileName, starting at path.'
+    for root, dirs, files in os.walk(path):
+        if fileName in files:
+            return os.path.join(root)
+    else:
+        return None
+
+moduleName = 'InputTrueTypeHintsx.py'
+customModulePathMAC = os.path.join('~', 'Library', 'Application Support', 'FontLab', 'Studio 5', 'Macros')
+customModulePathPC = os.path.join('~', 'Documents', 'FontLab', 'Studio5', 'Macros')
+
+customModulePathMAC = os.path.expanduser(customModulePathMAC)
+customModulePathPC = os.path.expanduser(customModulePathPC)
+possibleModulePaths = [fl.userpath, customModulePathMAC, customModulePathPC]
+
+print '\nLooking for %s ... ' % (moduleName)
+for path in possibleModulePaths:
+    modPath = findFile(moduleName, path)
+    if modPath:
+        print 'found at %s' % modPath
+        break
+
+if not modPath:
+    # Module was not found. World ends.
+    print 'Not found in the following folders:\n%s\n\
+Please make sure the possibleModulePaths list in this script \
+points to a folder containing %s' % ('\n'.join(possibleModulePaths), moduleName)
+
+else:
+    # Module was found, import it.
+    if not modPath in sys.path:
+        sys.path.append(modPath)
+
+    import InputTrueTypeHints
+
+
 MAC = False
 PC  = False
 if sys.platform in ('mac', 'darwin'): 
@@ -549,7 +575,7 @@ def postProccessTTF(ttFont):
 
     # Find and replace data in `prep` table
     if ttxData.find(kPrepTableFind) != -1:
-        print 'fixing `prep` table ...'
+        print 'Fixing `prep` table ...'
         ttxData = ttxData.replace(kPrepTableFind,kPrepTableReplace)
     # else:
     #     print '`prep` table string not found in ttx file.\nNo modifications to table made.'
@@ -588,6 +614,7 @@ def postProccessTTF(ttFont):
         os.rename(newTTFName, ttFont) # Renames the new file
     
     # Return if successful
+    print "Done."
     return 1
 
 
@@ -689,7 +716,7 @@ def processFonts(fontsList):
             pfaPath = convertUFOfontToPFA(pfaPath)
         
         fl.Open(pfaPath)
-        print "Processing %s ... (%d/%d)" % (fl.font.font_name, fontIndex, totalFonts)
+        print "\nProcessing %s ... (%d/%d)" % (fl.font.font_name, fontIndex, totalFonts)
         fontIndex += 1
     
         replaceFontZonesByFamilyZones()
@@ -788,10 +815,10 @@ def processFonts(fontsList):
 def run():
     # Get folder to process
     baseFolderPath = fl.GetPathName("Select font family directory")
-    if not baseFolderPath: # Cancel was clicked or Esc key was pressed
+    if not baseFolderPath: # Cancel was clicked or ESC key was pressed
         return
 
-    startTime = time.time()  # Initiates a timer of the whole process
+    startTime = time.time()
 
     fontsList = getFontPaths(baseFolderPath)
 
