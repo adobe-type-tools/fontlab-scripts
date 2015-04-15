@@ -78,8 +78,6 @@ def getgselectedglyphs(font, glyph, gindex):
 	listGlyphsSelected.append(glyph.name)
 fl.ForSelected(getgselectedglyphs)
 
-allGlyphsHintList = ["# Glyph name\tTT hints\n"]
-
 
 def readTTHintsFile(filePath):
 	file = open(filePath, "r")
@@ -260,6 +258,10 @@ def collectInstructions(tth, gName, coord_option):
 def processGlyphs(ttHintsDict, coord_option):
 	# Iterate through all the glyphs instead of just the ones selected.
 	# This way the order of the items in the output file will be constant and predictable.
+
+	allGlyphsHintList = ["# Glyph name\tTT hints\n"]
+
+
 	for glyph in fl.font.glyphs:
 		gName = glyph.name
 		
@@ -275,6 +277,8 @@ def processGlyphs(ttHintsDict, coord_option):
 					print "WARNING: The glyph %s has no TrueType hints." % gName
 			else:
 				allGlyphsHintList.append(ttHintsDict[gName] + '\n')
+
+	return allGlyphsHintList
 
 
 def run(parentDir, coord_option):
@@ -303,7 +307,7 @@ def run(parentDir, coord_option):
 	else:
 		ttHintsDict = {}
 	
-	processGlyphs(ttHintsDict, coord_option)
+	allGlyphsHintList = processGlyphs(ttHintsDict, coord_option)
 	
 	if len(allGlyphsHintList) > 1:
 		writeTTHintsFile(allGlyphsHintList, tthintsFilePath)
@@ -318,7 +322,7 @@ def run(parentDir, coord_option):
 
 
 def preRun(coord_option=False):
-	# Reset the Output window
+	# Clear the Output window
 	fl.output = '\n'
 	
 	if fl.count == 0:
