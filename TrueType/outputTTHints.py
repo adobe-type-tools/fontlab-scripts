@@ -73,11 +73,6 @@ interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
 alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
-listGlyphsSelected = []
-def getgselectedglyphs(font, glyph, gindex):
-	listGlyphsSelected.append(glyph.name)
-fl.ForSelected(getgselectedglyphs)
-
 
 def readTTHintsFile(filePath):
 	file = open(filePath, "r")
@@ -108,8 +103,8 @@ def writeTTHintsFile(content, filePath):
 	outfile.close()
 
 
-ttHintsGlyphNamesList = []
 def processTTHintsFileData(ttHintsList):
+	storedGlyphs = []
 	ttHintsDict = {}
 	
 	for item in ttHintsList:
@@ -121,9 +116,9 @@ def processTTHintsFileData(ttHintsList):
 		
 		gName = hintItems[0]
 		ttHintsDict[gName] = item
-		ttHintsGlyphNamesList.append(gName)
+		storedGlyphs.append(gName)
 	
-	return ttHintsDict
+	return storedGlyphs, ttHintsDict
 
 
 def analyzePoint(glyph, nodeIndex):
@@ -168,7 +163,7 @@ def analyzePoint(glyph, nodeIndex):
 	return nodeIndex, point_coordinates
 
 
-def collectInstructions(tth, gName, coord_option):
+def collectInstructions(tth, glyph, coord_option):
 	''' Parses tth commands (list of integers) and returns them formatted
 		for writing the data into an external text file.
 
@@ -189,7 +184,6 @@ def collectInstructions(tth, gName, coord_option):
 		[command code, point index, offset, point range min, point range max]
 	'''
 
-	glyph = fl.font[gName]
 	coord_commandsList = []
 	index_commandsList = []
 
@@ -237,7 +231,7 @@ def collectInstructions(tth, gName, coord_option):
 
 		else:
 			'unknown instruction code'
-			print "\tERROR: Hinting problem in glyph %s." % gName
+			print "\tERROR: Hinting problem in glyph %s." % glyph.name
 			coord_command = []
 			index_command = []
 
@@ -255,42 +249,44 @@ def collectInstructions(tth, gName, coord_option):
 		return index_commandsList
 
 
-def processGlyphs(ttHintsDict, coord_option):
+def processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option):
 	# Iterate through all the glyphs instead of just the ones selected.
 	# This way the order of the items in the output file will be constant and predictable.
 
 	allGlyphsHintList = ["# Glyph name\tTT hints\n"]
-
-
+	
 	for glyph in fl.font.glyphs:
 		gName = glyph.name
 		
-		if (gName in listGlyphsSelected) or (gName in ttHintsGlyphNamesList):
-			if gName in listGlyphsSelected:
+		if (gName in selectedGlyphs) or (gName in storedGlyphs):
+			if gName in selectedGlyphs:
+				# If the glyph is selected, read its hints.
 				tth = TTH(glyph)
 				tth.LoadProgram()
 		
 				if len(tth.commands):
-					gHints = "%s\t%s\n" % (gName, ';'.join(collectInstructions(tth, gName, coord_option)))
+					gHints = "%s\t%s\n" % (gName, ';'.join(collectInstructions(tth, glyph, coord_option)))
 					allGlyphsHintList.append(gHints)
 				else:
 					print "WARNING: The glyph %s has no TrueType hints." % gName
 			else:
+				# If the glyph is not selected but present in the external 
+				# file, just read the data from the ttHintsDict and dump it.
 				allGlyphsHintList.append(ttHintsDict[gName] + '\n')
 
 	return allGlyphsHintList
 
 
-def run(parentDir, coord_option):
+def run(font, parentDir, coord_option):
 	if coord_option:
 		kTTHintsFileName = "tthints_coords"
 	else:
 		kTTHintsFileName = "tthints"
 
-
 	tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
-	
-	if not len(listGlyphsSelected):
+	selectedGlyphs = [font[gIndex].name for gIndex in range(len(font)) if fl.Selected(gIndex)]
+
+	if not len(selectedGlyphs):
 		print "Select the glyph(s) to process and try again."
 		return
 	
@@ -303,11 +299,13 @@ def run(parentDir, coord_option):
 		modFile = False
 	
 	if len(ttHintsList):
-		ttHintsDict = processTTHintsFileData(ttHintsList)
+		storedGlyphs = processTTHintsFileData(ttHintsList)[0]
+		ttHintsDict = processTTHintsFileData(ttHintsList)[1]
 	else:
+		storedGlyphs = []
 		ttHintsDict = {}
 	
-	allGlyphsHintList = processGlyphs(ttHintsDict, coord_option)
+	allGlyphsHintList = processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option)
 	
 	if len(allGlyphsHintList) > 1:
 		writeTTHintsFile(allGlyphsHintList, tthintsFilePath)
@@ -341,7 +339,7 @@ def preRun(coord_option=False):
 		print "The font has not been saved. Please save the font and try again."
 		return
 	
-	run(parentDir, coord_option)
+	run(font, parentDir, coord_option)
 
 
 if __name__ == "__main__":
