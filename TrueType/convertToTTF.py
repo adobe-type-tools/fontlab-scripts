@@ -137,17 +137,8 @@ kFontTXT = "font.txt"
 kFontUFO = "font.ufo"
 kFontTTF = "font.ttf"
 
-conversionOptions = []
-convertT1toTTOptionsProcessed = False
-changeTTfontSettingsProcessed = False
-setType1openPrefsProcessed = False
-setTTgeneratePrefsProcessed = False
-setTTautohintPrefsProcessed = False
-
 baselineZonesWereRemoved = False
 fontZonesWereReplaced = False
-stemsAndPPMsEdited = False
-ttHintsEdited = False
 
 flPrefs = Options()
 flPrefs.Load()
@@ -260,8 +251,6 @@ def readPPMsFile(filePath):
 
 
 def replaceStemsAndPPMs(hPPMsList, vPPMsList):
-    global stemsAndPPMsEdited
-
     if len(hPPMsList) != len(fl.font.ttinfo.hstem_data):
         print "\tERROR: The amount of H stems does not match"
         return
@@ -269,8 +258,6 @@ def replaceStemsAndPPMs(hPPMsList, vPPMsList):
         print "\tERROR: The amount of V stems does not match"
         return
 
-    stemsAndPPMsEdited = True
-    
     for i in range(len(fl.font.ttinfo.hstem_data)):
         name, width, ppm2, ppm3, ppm4, ppm5, ppm6 = hPPMsList[i].split('\t')
         stem = TTStem()
@@ -379,8 +366,6 @@ def convertT1toTT():
     Converts an open FL font object from PS to TT outlines, using on-board FontLab commands.
     The outlines are post-processed to reset starting points to their original position.
     '''
-    global convertT1toTTOptionsProcessed
-    
     for g in fl.font.glyphs:
 
         # Keeping track of original start point coordinates:
@@ -401,17 +386,8 @@ def convertT1toTT():
         for pointCoords in startPointCoords[::-1]:
             g.SetStartNode(newCoordDict[pointCoords])
 
-        if not convertT1toTTOptionsProcessed:
-            conversionOptions.append("Bottom zones above baseline removed")
-            conversionOptions.append("Type 1 vertical glyph hints removed")
-            conversionOptions.append("Outlines converted to TrueType format")
-            conversionOptions.append("Countour direction set to TrueType")
-            conversionOptions.append("Hints converted to TrueType instructions")
-            convertT1toTTOptionsProcessed = True
-
 
 def changeTTfontSettings():
-    global changeTTfontSettingsProcessed
     # Clear `gasp` array:
     if len(fl.font.ttinfo.gasp):
         del fl.font.ttinfo.gasp[0]
@@ -436,35 +412,16 @@ def changeTTfontSettings():
     # Uncheck "Create [vdmx] table", also
     # uncheck "Automatically add .null, CR and space characters"
     fl.font.ttinfo.head_flags = 0
-    
-    if not changeTTfontSettingsProcessed:
-        if not len(fl.font.ttinfo.hdmx):
-            hdmxArray = None
-        else:
-            hdmxArray = fl.font.ttinfo.hdmx
-        conversionOptions.append("'gasp' table: %s" % fl.font.ttinfo.gasp[0])
-        conversionOptions.append("'hdmx' table: %s" % hdmxArray)
-        conversionOptions.append("'vdmx' table: %s" % fl.font.ttinfo.head_flags)
-        changeTTfontSettingsProcessed = True
 
 
 def setType1openPrefs():
-    global setType1openPrefsProcessed
     flPrefs.T1Decompose     = 1 # checked   - Decompose all composite glyphs
     flPrefs.T1Unicode       = 0 # unchecked - Generate Unicode indexes for all glyphs
     flPrefs.OTGenerate      = 0 # unchecked - Generate basic OpenType features for Type 1 fonts with Standard encoding
     flPrefs.T1MatchEncoding = 0 # unchecked - Find matching encoding table if possible
-    
-    if not setType1openPrefsProcessed:
-        conversionOptions.append("T1Decompose = %d" % flPrefs.T1Decompose)
-        conversionOptions.append("T1Unicode = %d" % flPrefs.T1Unicode)
-        conversionOptions.append("OTGenerate = %d" % flPrefs.OTGenerate)
-        conversionOptions.append("T1MatchEncoding = %d" % flPrefs.T1MatchEncoding)
-        setType1openPrefsProcessed = True
 
 
 def setTTgeneratePrefs():
-    global setTTgeneratePrefsProcessed
     flPrefs.TTENoReorder        = 1 # unchecked - Automatically reorder glyphs
     flPrefs.TTEFontNames        = 1 # option    - Do not export OpenType name records
     flPrefs.TTESmartMacNames    = 0 # unchecked - Use the OpenType names as menu names on Macintosh
@@ -489,38 +446,12 @@ def setTTgeneratePrefs():
                                     # unchecked - Export only first 256 glyphs of the selected codepage
                                     # unchecked - Put MS Char Set value into fsSelection field
 
-    if not setTTgeneratePrefsProcessed:
-        conversionOptions.append("TTENoReorder = %d" % flPrefs.TTENoReorder)
-        conversionOptions.append("TTEFontNames = %d" % flPrefs.TTEFontNames)
-        conversionOptions.append("TTESmartMacNames = %d" % flPrefs.TTESmartMacNames)
-        conversionOptions.append("TTEStoreTables = %d" % flPrefs.TTEStoreTables)
-        conversionOptions.append("TTEExportOT = %d" % flPrefs.TTEExportOT)
-        conversionOptions.append("DSIG_Use = %d" % flPrefs.DSIG_Use)
-        conversionOptions.append("TTEHint = %d" % flPrefs.TTEHint)
-        conversionOptions.append("TTEKeep = %d" % flPrefs.TTEKeep)
-        conversionOptions.append("TTEVisual = %d" % flPrefs.TTEVisual)
-        conversionOptions.append("TTEAutohint = %d" % flPrefs.TTEAutohint)
-        conversionOptions.append("TTEWriteBitmaps = %d" % flPrefs.TTEWriteBitmaps)
-        conversionOptions.append("CopyHDMXData = %d" % flPrefs.CopyHDMXData)
-        conversionOptions.append("OTWriteMort = %d" % flPrefs.OTWriteMort)
-        conversionOptions.append("TTEVersionOS2 = %d" % flPrefs.TTEVersionOS2)
-        conversionOptions.append("TTEWriteKernTable = %d" % flPrefs.TTEWriteKernTable)
-        conversionOptions.append("TTEWriteKernFeature = %d" % flPrefs.TTEWriteKernFeature)
-        conversionOptions.append("TTECmap10 = %d" % flPrefs.TTECmap10)
-        conversionOptions.append("TTEExportUnicode = %d" % flPrefs.TTEExportUnicode)
-        setTTgeneratePrefsProcessed = True
-
 
 def setTTautohintPrefs():
-    global setTTautohintPrefsProcessed
     # The single link attachment precision is 7 in all cases
     # flPrefs.TTHHintingOptions = 16135 # All options checked
     # flPrefs.TTHHintingOptions = 7     # All options unchecked
     flPrefs.TTHHintingOptions = 2055  # Cusps option checked
-    
-    if not setTTautohintPrefsProcessed:
-        conversionOptions.append("TTHHintingOptions = %d" % flPrefs.TTHHintingOptions)
-        setTTautohintPrefsProcessed = True
 
 
 def addNULLandCRglyphs():
@@ -841,13 +772,6 @@ def run():
         print '\nCompleted in %.1f seconds.\n' % elapsedSeconds
     else:
         print '\nCompleted in %s minutes and %s seconds.\n' % (elapsedSeconds/60, elapsedSeconds%60)
-
-    # print "Conversion options:"
-    # print '\n'.join(conversionOptions)
-    # if stemsAndPPMsEdited:
-    #     print "Stems and PPMs edited"
-    # if ttHintsEdited:
-    #     print "TT glyph hints edited"
 
 
 if __name__ == "__main__":
