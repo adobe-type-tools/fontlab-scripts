@@ -138,9 +138,6 @@ kFontTXT = "font.txt"
 kFontUFO = "font.ufo"
 kFontTTF = "font.ttf"
 
-baselineZonesWereRemoved = False
-fontZonesWereReplaced = False
-
 flPrefs = Options()
 flPrefs.Load()
 
@@ -295,24 +292,29 @@ def processZonesArray(inArray):
 
 
 def removeBottomZonesAboveBaseline():
-    global baselineZonesWereRemoved
-    
+    baselineZonesWereRemoved = False
     # this is a single master font, so only the first array will have non-zero values:
     newOtherBluesArray = processZonesArray(fl.font.other_blues[0])
     if (fl.font.other_blues_num != len(newOtherBluesArray)):
-        baselineZonesWereRemoved = True
-    fl.font.other_blues_num = len(newOtherBluesArray)  # trim the number of zones
+        # trim the number of zones
+        fl.font.other_blues_num = len(newOtherBluesArray)
 
-    for x in range(len(newOtherBluesArray)):
-        fl.font.other_blues[0][x] = newOtherBluesArray[x]
+        for x in range(len(newOtherBluesArray)):
+            fl.font.other_blues[0][x] = newOtherBluesArray[x]
+        
+        baselineZonesWereRemoved = True
     
     newFamilyOtherBluesArray = processZonesArray(fl.font.family_other_blues[0])
     if (fl.font.family_other_blues_num != len(newFamilyOtherBluesArray)):
-        baselineZonesWereRemoved = True
-    fl.font.family_other_blues_num = len(newFamilyOtherBluesArray)
+        # trim the number of zones
+        fl.font.family_other_blues_num = len(newFamilyOtherBluesArray)
     
-    for x in range(len(newFamilyOtherBluesArray)):
-        fl.font.family_other_blues[0][x] = newFamilyOtherBluesArray[x]
+        for x in range(len(newFamilyOtherBluesArray)):
+            fl.font.family_other_blues[0][x] = newFamilyOtherBluesArray[x]
+        
+        baselineZonesWereRemoved = True
+    
+    return baselineZonesWereRemoved
 
 
 def replaceFontZonesByFamilyZones():
@@ -321,15 +323,14 @@ def replaceFontZonesByFamilyZones():
     all the styles have the same vertical height at all ppems.
     If the font doesn't have family zones (e.g. Regular style), don't do anything.
     """
-    global fontZonesWereReplaced
-
+    fontZonesWereReplaced = False
     # TOP zones
     if len(fl.font.family_blues[0]):
         if fl.font.family_blues_num == 14 and fl.font.blue_values_num < fl.font.family_blues_num:
             print
             print "### MAJOR ERROR ###: Due to a FontLab bug the font's TOP zones cannot be replaced by the family TOP zones"
             print
-            return
+            return fontZonesWereReplaced
         elif fl.font.family_blues_num == 14 and fl.font.blue_values_num == fl.font.family_blues_num:
             pass
         else:
@@ -348,7 +349,7 @@ def replaceFontZonesByFamilyZones():
             print
             print "### MAJOR ERROR ###: Due to a FontLab bug the font's BOTTOM zones cannot be replaced by the family BOTTOM zones"
             print
-            return
+            return fontZonesWereReplaced
         elif fl.font.family_other_blues_num == 10 and fl.font.other_blues_num == fl.font.family_other_blues_num:
             pass
         else:
@@ -360,6 +361,8 @@ def replaceFontZonesByFamilyZones():
             fl.font.other_blues[0][x] = fl.font.family_other_blues[0][x]
         print "WARNING: The font's BOTTOM zones were replaced by the family BOTTOM zones."
         fontZonesWereReplaced = True
+    
+    return fontZonesWereReplaced
 
 
 def convertT1toTT():
@@ -658,8 +661,8 @@ def processFonts(fontsList):
         print "\nProcessing %s ... (%d/%d)" % (fl.font.font_name, fontIndex, totalFonts)
         fontIndex += 1
     
-        replaceFontZonesByFamilyZones()
-        removeBottomZonesAboveBaseline()
+        fontZonesWereReplaced = replaceFontZonesByFamilyZones()
+        baselineZonesWereRemoved = removeBottomZonesAboveBaseline()
         
         # NOTE: After making changes to the PostScript alignment zones, the TrueType equivalents 
         # have to be updated as well, but I couldn't find a way to do it via scripting (because 
