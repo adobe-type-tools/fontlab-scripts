@@ -42,10 +42,12 @@ o	5,33,5,0;5,13,23,0;1,10,0;2,0,0;4,0,18,0,-1;4,10,28,0,-1
 ==================================================
 Versions:
 
+v1.4 - Apr 17 2015 - Always write to a file named 'tthints' (even if the
+                     data uses point coordinates instead of point indexes).
 v1.3 - Mar 25 2015 - Allow optional coordinate output.
 					 Allow hinting sidebearings.
 v1.2 - Mar 23 2015 – Allow instructions in x-direction.
-v1.1 - Mar 04 2015 – change name to Output TrueType Hints to supersede 
+v1.1 - Mar 04 2015 – Change name to Output TrueType Hints to supersede 
 					 the old script of the same name.
 v1.0 - Nov 27 2013 - Initial release
 """
@@ -85,8 +87,8 @@ def readTTHintsFile(filePath):
 	for i in range(len(lines)):
 		line = lines[i]
 		# Skip over blank lines
-		line2 = line.strip()
-		if not line2:
+		stripline = line.strip()
+		if not stripline:
 			continue
 		# Skip over comments
 		if line.find('#') >= 0:
@@ -158,7 +160,7 @@ def analyzePoint(glyph, nodeIndex):
 
 	if point.type == nOFF:
 		gName = glyph.name
-		print "\tERROR: Off-curve point %s hinted in glyph %s." % (point_coordinates, gName)
+		print "\tWARNING: Off-curve point %s hinted in glyph %s." % (point_coordinates, gName)
 
 	return nodeIndex, point_coordinates
 
@@ -278,10 +280,7 @@ def processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option):
 
 
 def run(font, parentDir, coord_option):
-	if coord_option:
-		kTTHintsFileName = "tthints_coords"
-	else:
-		kTTHintsFileName = "tthints"
+	kTTHintsFileName = "tthints"
 
 	tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
 	selectedGlyphs = [font[gIndex].name for gIndex in range(len(font)) if fl.Selected(gIndex)]

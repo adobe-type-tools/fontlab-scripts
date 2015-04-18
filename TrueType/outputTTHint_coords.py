@@ -26,8 +26,8 @@ DEALINGS IN THE SOFTWARE.
 __doc__ = """
 Output TrueType Hints_coords
 
-This FontLab macro will write an external simple text file `tthints_coords` 
-which contains TrueType instructions and coordinates of hinted points for each 
+This FontLab macro will write an external simple text file `tthints` which
+contains TrueType instructions and coordinates of hinted points for each 
 selected glyph of an open VFB.
 If the external file already exists, the script will replace the existing 
 entries and add new entries as needed. 
@@ -43,6 +43,7 @@ run from the same folder.
 ==================================================
 Versions:
 
+v1.1 - Apr 17 2015 - Change name of output file from 'tthints_coords' to 'tthints'.
 v1.0 - Mar 31 2015 - First public release.
 """
 

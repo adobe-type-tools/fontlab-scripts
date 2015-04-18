@@ -193,14 +193,8 @@ this information is read and applied to output files.
 
 ### `inputTTHints.py`
 _FontLab menu name: **Input TrueType Hints**_  
-Reads an applies the contents of a `tthints` file to an open VFB.
-
-
-### `inputTTHints_coords.py`
-_FontLab menu name: **Input TrueType Hints\_coords**_  
-Reads and applies the contents of a `tthints_coords` file to an open VFB.  
-This script imports `inputTTHints.py` as a module and therefore needs to be in
-the same folder.
+Reads an applies the contents of a `tthints` file to an open VFB. It's indifferent
+if this file uses point indexes or point coordinates.
 
 
 ### `outputPPMs.py`
@@ -222,13 +216,13 @@ message if hints are attached to off-curve points, but still write them.
 
 ### `outputTTHints_coords.py`
 _FontLab menu name: **Output TrueType Hints\_coords**_  
-Like `outputTTHints.py`, but instead of point indexes, coordinates are written. 
+Like `outputTTHints.py`, but instead of point indexes, point coordinates are written. 
 This script can be useful in the case that a TTF-VFB file has been created 
 without the `convertToTTF.py` script (for instance directly in FontLab).
 Since `convertToTTF.py` makes some outline corrections, those outlines might not 
 perfectly match the previous conversion. Basically, this is an attempt to save 
 any hinting work that needs to be used in this workflow. 
-Writes a `tthints_coords` file. 
+The data is written to a `tthints` file. 
 
 This script imports `outputTTHints.py` as a module and therefore needs to be in 
 the same folder.

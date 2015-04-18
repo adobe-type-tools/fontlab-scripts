@@ -42,6 +42,7 @@ run from the same folder.
 
 Versions:
 
+v1.4 - Apr 17 2015 - Support changes made to inputTTHints module.
 v1.3 - Apr 02 2015 - Now also works properly on FL Windows. 
 v1.2 - Mar 26 2015 - Move code reading external `tthints` file to an adjacent 
                      module.
@@ -703,7 +704,7 @@ def processFonts(fontsList):
 
         tthintsFilePath = os.path.join(folderPath, kTTHintsFileName)
         if os.path.exists(tthintsFilePath):
-            inputTTHints.run(folderPath, coord_option=False)
+            inputTTHints.run(folderPath)
             # readTTHintsFile(tthintsFilePath)
             # replaceTTHints()
          

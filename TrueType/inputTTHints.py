@@ -27,13 +27,15 @@ __doc__ = """
 Input TrueType Hints
 
 This FontLab macro will read an external simple text file `tthints` containing
-TrueType instructions and hinted point indexes for a number of glyphs, and 
-will apply this data to the glyphs of an open VFB.
+TrueType instructions and hinted point indexes or point coordinates for a number 
+of glyphs, and will apply this data to the glyphs of an open VFB.
 
 ==================================================
 Versions:
 
-v1.3 - Mar 24 2015 - Enable reading tthints_coords file with coordinates.
+v1.4 - Apr 17 2015 - Remove unneeded coord_option, now that hints expressed with
+                     point coordinates are saved as 'tthints' instead of 'tthints_coords'.
+v1.3 - Mar 24 2015 - Enable reading 'tthints_coords' file with coordinates.
 v1.2 - Mar 23 2015 - Enable instructions in x-direction.
 v1.1 - Sep 07 2013 - Enable the reading of 'tthints' files with an optional 
 					 column for glyph color mark.
@@ -195,7 +197,7 @@ def applyTTHints(ttHintsList):
 			try:
 				ttc = TTHCommand(commandType)
 			except RuntimeError:
-				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range 1-23." % (gName, item)
+				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (gName, item, vAlignLinkTop, vFinDelta)
 				continue
 			
 
@@ -243,11 +245,8 @@ def applyTTHints(ttHintsList):
 		fl.font.modified = 1
 
 
-def run(parentDir, coord_option):
-	if coord_option:
-		kTTHintsFileName = "tthints_coords"
-	else:
-		kTTHintsFileName = "tthints"
+def run(parentDir):
+	kTTHintsFileName = "tthints"
 
 	tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
 	if os.path.exists(tthintsFilePath):
@@ -266,8 +265,8 @@ def run(parentDir, coord_option):
 		
 
 
-def preRun(coord_option=False):
-	# Reset the Output window
+def preRun():
+	# Clear the Output window
 	fl.output = '\n'
 	
 	if fl.count == 0:
@@ -286,7 +285,7 @@ def preRun(coord_option=False):
 		print "The font has not been saved. Please save the font and try again."
 		return
 	
-	run(parentDir, coord_option)
+	run(parentDir)
 
 
 if __name__ == "__main__":
