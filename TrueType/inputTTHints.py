@@ -153,7 +153,7 @@ def applyTTHints(ttHintsList):
 			hintItems.append(80) # green
 		
 		else:
-			print "ERROR: This hint definition does not have the correct format\n\t%s" % item
+			print "ERROR: This hint definition does not have the correct format\n\t%s" % line
 			continue
 
 		gName, gHintsString, gMark = hintItems
@@ -190,14 +190,14 @@ def applyTTHints(ttHintsList):
 				continue
 			
 			if len(commandList) < 3:
-				print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, item)
+				print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, commandString)
 				continue
 			
 			# Create the TTHCommand
 			try:
 				ttc = TTHCommand(commandType)
 			except RuntimeError:
-				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (gName, item, vAlignLinkTop, vFinDelta)
+				print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (gName, commandType, vAlignLinkTop, vFinDelta)
 				continue
 			
 
