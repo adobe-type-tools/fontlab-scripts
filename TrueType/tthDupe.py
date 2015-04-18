@@ -131,8 +131,6 @@ kTXTFileName = "font.txt"
 kUFOFileName = "font.ufo"
 kTTHintsFileName = "tthints"
 
-okToProcessTargetFonts = True
-
 
 # -----------
 
@@ -314,6 +312,7 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, rawHintin
                 MyHintedNode contains x, y, templateTTIndex, templateT1Index for a given point.
 
     '''
+    okToProcessTargetFonts = True
     outputDict = {}
 
     for gName in glyphList:
@@ -378,7 +377,7 @@ def collectTemplateIndexes(tthintsFilePath, ttfont, t1font, glyphList, rawHintin
         if writeGlyphRecipe:
             outputDict[gName] = hintedNodesDict
 
-    return outputDict
+    return outputDict, okToProcessTargetFonts
 
 
 def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
@@ -656,7 +655,7 @@ def run():
             g = currentT1RBfont[gName]
             templateT1RBfont.insertGlyph(g)
 
-        hintedNodeDict = collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font, glyphList, rawHintingDict)
+        hintedNodeDict, okToProcessTargetFonts = collectTemplateIndexes(tthintsFilePath, templateTTfont, templateT1font, glyphList, rawHintingDict)
         closeAllOpenedFonts()
         
         if okToProcessTargetFonts:
