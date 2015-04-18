@@ -538,10 +538,6 @@ def postProccessTTF(ttFont):
         pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         report = '\n'.join(pp.communicate())
 
-    # Delete files
-    # os.remove(ttFont) # This is the original TT font
-    os.remove(ttxFont) # This is the temporary TTX file
-    
     m = re.search(r"to\s+\"([^\"]+)\"", report) # ttx message: Compiling "font.ttx" to "font#1.ttf"...
     if not m:
         print "ERROR: Failed to merge changes into TTF font with 'ttx' tool. Report follows."
@@ -549,10 +545,17 @@ def postProccessTTF(ttFont):
         return
 
     newTTFName = m.group(1) # file name of new TT file, usually 'font#1.ttf'
+    
+    # Check the file size; if it's zero it means that a TTX error/traceback happened
+    if not os.path.getsize(newTTFName) > 0:
+        print "ERROR: TTX error/traceback."
+        return
+    
+    # Delete files
+    os.remove(ttFont) # This is the original TT font
+    os.remove(ttxFont) # This is the temporary TTX file
+    
     if newTTFName != ttFont:
-        if PC:
-            # On Windows, a file cannot be overwritten if it already exists.
-            os.remove(ttFont)
         os.rename(newTTFName, ttFont) # Renames the new file
     
     # Return if successful
