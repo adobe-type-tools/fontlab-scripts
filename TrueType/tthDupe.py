@@ -67,6 +67,7 @@ Duplicating horizontal sidebearing-hints is not supported at this time.
 Versions:
 
 v1.4 - Apr 18 2015 - Support reading instructions defined with point coordinates.
+                     Add option to save instructions using point coordinates.
 v1.3 - Apr 02 2015 - Now also works in FL Windows. 
 v1.2 - Mar 29 2015 - Speed improvement by reading/writing only glyphs listed 
                      in the tthints file.
@@ -442,6 +443,7 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
 
 def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
     newTTindexesList = []
+    newTTcoordsList = []
     templateTTdict = rawHintingDict[glyph.name]
 
     for templateTTindex in nodeIndexList:
@@ -463,12 +465,13 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
 
         if targetT1nodeCoords in ttGlyphNodeIndexDict:
             newTTindexesList.append(ttGlyphNodeIndexDict[targetT1nodeCoords])
+            newTTcoordsList.append(targetT1nodeCoords)
         else:
             print "Could not find target node in %s." % glyph.name
-    return newTTindexesList
+    return newTTindexesList, newTTcoordsList
 
 
-def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, rawHintingDict):
+def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, rawHintingDict, coord_option):
     totalFolders = len(folderPathsList)
     print "%d folders found" % totalFolders
     
@@ -569,22 +572,27 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
                     elif commandType in alignments:
                         nodes = [commandList[1]]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = [commandList[-1]]
 
                     elif commandType in links:
                         nodes = commandList[1:3]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = commandList[3:]
 
                     elif commandType in interpolations:
                         nodes = commandList[1:-1]
-                        targetNodeIndexList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
                         hintParamsList = [commandList[-1]]
 
-                newCommandList = [commandType] + targetNodeIndexList + hintParamsList
+                if coord_option:
+                    targetNodeList = targetNodeCoordsList
+                else:
+                    targetNodeList = targetNodeIndexList
+                
+                newCommandList = [commandType] + targetNodeList + hintParamsList
                 newCommandString = ','.join(map(str, newCommandList))
-                newHintsList.append(newCommandString)
+                newHintsList.append(newCommandString.replace(" ", ""))
 
             newHintsLine = "%s\t%s" % (gName, ';'.join(newHintsList))
             if gMark:
@@ -639,7 +647,7 @@ def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
             print out, err
 
 
-def run():
+def run(coord_option=False):
     
     # Get the folder that contains the source hinting data, and source font files:
     templateFolderPath = fl.GetPathName("Select directory that contains the 'tthints' template file...")
@@ -719,7 +727,7 @@ def run():
         closeAllOpenedFonts()
         
         if okToProcessTargetFonts:
-            processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, indexOnlyRawHintingDict)
+            processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, indexOnlyRawHintingDict, coord_option)
         else:
             print "Can't process target fonts because of hinting errors found in template font."
 

@@ -236,6 +236,15 @@ weights, cutting the time investment for TT hinting by a significant amount.
 The script is to be run from within FontLab, and does not need any of the
 involved fonts to be open.
 
+
+### `tthDupe_coords.py`
+_FontLab menu name: **TT Hints Duplicator\_coords**_  
+Like `tthDupe.py`, but instead of point indexes, point coordinates are written. 
+
+This script imports `tthDupe.py` as a module and therefore needs to be in 
+the same folder.
+
+
 __Important__: 
 
 1. `tthDupe.py` can only process TT instructions that are attached to *on-curve* 
