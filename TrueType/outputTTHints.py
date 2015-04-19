@@ -112,7 +112,7 @@ def processTTHintsFileData(ttHintsList):
 	for item in ttHintsList:
 		hintItems = item.split("\t")
 		
-		if len(hintItems) != 2:
+		if len(hintItems) not in [2,3]:
 			print "\tERROR: This hint definition does not have the correct format\n\t%s" % item
 			continue
 		
