@@ -380,15 +380,15 @@ def convertT1toTT():
         fl.TransformGlyph(g, 5, "0002")  # Remove Vertical Hints
         fl.TransformGlyph(g, 13, "")     # Curves to TrueType
         fl.TransformGlyph(g, 14, "0001") # Contour direction [TT]
-        fl.TransformGlyph(g, 7, "")      # Convert to instructions
         
-        # The start points move when FL reverses the contour. Annoying!
+        # The start points might move when FL reverses the contour.
         # This dictionary keeps track of the new coordinates.
         newCoordDict = {(node.x, node.y): index for index, node in enumerate(g.nodes)}
-        
         # Going through all start points backwards, and re-setting them to original position.
         for pointCoords in startPointCoords[::-1]:
             g.SetStartNode(newCoordDict[pointCoords])
+
+        fl.TransformGlyph(g, 7, "")      # Convert PS hints to TT instructions.
 
 
 def changeTTfontSettings():
