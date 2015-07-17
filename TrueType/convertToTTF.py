@@ -3,23 +3,23 @@
 
 __copyright__ = __license__ =  """
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
- 
+
 Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"), 
-to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit persons to whom the 
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
- 
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
- 
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
@@ -28,14 +28,14 @@ Convert PFA/UFO/TXT to TTF/VFB
 
 This FontLab script will convert one or more hinted PFA/UFO or TXT files
 into TTF files, for use as input for makeOTF.
-The script will first ask for a directory, which usually should be the 
-family's top-most folder. It will then crawl through that folder and 
-process all input files it finds. In addition to the directory, the script 
+The script will first ask for a directory, which usually should be the
+family's top-most folder. It will then crawl through that folder and
+process all input files it finds. In addition to the directory, the script
 will also ask for an encoding file. This encoding file is a FontLab '.enc'
 file which the script will use for ordering the glyphs.
 
 Note:
-This script imports the `Input TrueType Hints` script, therefore needs to be 
+This script imports the `Input TrueType Hints` script, therefore needs to be
 run from the same folder.
 
 ==================================================
@@ -44,8 +44,8 @@ Versions:
 
 v1.5 - Jul 17 2015 - Turn off the addition of NULL and CR glyphs.
 v1.4 - Apr 17 2015 - Support changes made to inputTTHints module.
-v1.3 - Apr 02 2015 - Now also works properly on FL Windows. 
-v1.2 - Mar 26 2015 - Move code reading external `tthints` file to an adjacent 
+v1.3 - Apr 02 2015 - Now also works properly on FL Windows.
+v1.2 - Mar 26 2015 - Move code reading external `tthints` file to an adjacent
                      module.
 v1.1 - Mar 23 2015 - Allow instructions in x-direction.
 v1.0 - Mar 04 2015 - Initial public release (Robothon 2015).
@@ -109,13 +109,13 @@ else:
 
 MAC = False
 PC  = False
-if sys.platform in ('mac', 'darwin'): 
+if sys.platform in ('mac', 'darwin'):
     MAC = True
-elif os.name == 'nt': 
+elif os.name == 'nt':
     PC = True
 
 
-# Adding the FDK Path to the env variable (on Mac only) so 
+# Adding the FDK Path to the env variable (on Mac only) so
 # that command line tools can be called from FontLab:'
 if MAC:
     fdkPathMac = os.sep.join((os.path.expanduser('~'), 'bin', 'FDK', 'tools', 'osx'))
@@ -190,7 +190,7 @@ def getGOADB2ndColumn(goadbList):
     lineNum = 1
     skippedLines = 0
     re_match1stCol = re.compile(r"(\S+)\t(\S+)(\t\S+)?")
-    
+
     for line in goadbList:
         # Skip over blank lines
         stripline = line.strip()
@@ -203,7 +203,7 @@ def getGOADB2ndColumn(goadbList):
             resultList.append(result.group(2) + '\n')
         else: # nothing matched
             print "Problem matching line %d (current GOADB)" % lineNum
-        
+
         lineNum += 1
 
     if (len(goadbList) != (len(resultList) + skippedLines)):
@@ -219,7 +219,7 @@ def makeTempEncFileFromGOADB(goadbPath):
     goadb2ndColumnList = getGOADB2ndColumn(goadbFileContent)
     if not goadb2ndColumnList:
         return None
-    
+
     encPath = os.path.join(os.path.dirname(goadbPath), kTempEncFileName)
     writeFile(goadb2ndColumnList, encPath)
     return encPath
@@ -230,7 +230,7 @@ def readPPMsFile(filePath):
 
     hPPMsList = []
     vPPMsList = []
-    
+
     for i in range(len(lines)):
         line = lines[i]
         # Skip over blank lines
@@ -302,25 +302,25 @@ def removeBottomZonesAboveBaseline():
 
         for x in range(len(newOtherBluesArray)):
             fl.font.other_blues[0][x] = newOtherBluesArray[x]
-        
+
         baselineZonesWereRemoved = True
-    
+
     newFamilyOtherBluesArray = processZonesArray(fl.font.family_other_blues[0])
     if (fl.font.family_other_blues_num != len(newFamilyOtherBluesArray)):
         # trim the number of zones
         fl.font.family_other_blues_num = len(newFamilyOtherBluesArray)
-    
+
         for x in range(len(newFamilyOtherBluesArray)):
             fl.font.family_other_blues[0][x] = newFamilyOtherBluesArray[x]
-        
+
         baselineZonesWereRemoved = True
-    
+
     return baselineZonesWereRemoved
 
 
 def replaceFontZonesByFamilyZones():
     """
-    The font's zones are replaced by the family zones to make sure that 
+    The font's zones are replaced by the family zones to make sure that
     all the styles have the same vertical height at all ppems.
     If the font doesn't have family zones (e.g. Regular style), don't do anything.
     """
@@ -335,7 +335,7 @@ def replaceFontZonesByFamilyZones():
         elif fl.font.family_blues_num == 14 and fl.font.blue_values_num == fl.font.family_blues_num:
             pass
         else:
-            fl.font.blue_values_num = fl.font.family_blues_num 
+            fl.font.blue_values_num = fl.font.family_blues_num
             # This will create a traceback if there are 7 top zones, therefore the IFs above
 
         # Replace the font's zones by the family zones
@@ -354,7 +354,7 @@ def replaceFontZonesByFamilyZones():
         elif fl.font.family_other_blues_num == 10 and fl.font.other_blues_num == fl.font.family_other_blues_num:
             pass
         else:
-            fl.font.other_blues_num = fl.font.family_other_blues_num 
+            fl.font.other_blues_num = fl.font.family_other_blues_num
             # This will create a traceback if there are 5 bottom zones, therefore the IFs above
 
         # Replace the font's zones by the family zones
@@ -362,7 +362,7 @@ def replaceFontZonesByFamilyZones():
             fl.font.other_blues[0][x] = fl.font.family_other_blues[0][x]
         print "WARNING: The font's BOTTOM zones were replaced by the family BOTTOM zones."
         fontZonesWereReplaced = True
-    
+
     return fontZonesWereReplaced
 
 
@@ -381,7 +381,7 @@ def convertT1toTT():
         fl.TransformGlyph(g, 5, "0002")  # Remove Vertical Hints
         fl.TransformGlyph(g, 13, "")     # Curves to TrueType
         fl.TransformGlyph(g, 14, "0001") # Contour direction [TT]
-        
+
         # The start points might move when FL reverses the contour.
         # This dictionary keeps track of the new coordinates.
         newCoordDict = {(node.x, node.y): index for index, node in enumerate(g.nodes)}
@@ -397,23 +397,23 @@ def changeTTfontSettings():
     if len(fl.font.ttinfo.gasp):
         del fl.font.ttinfo.gasp[0]
     # Create `gasp` element:
-    gaspElement = TTGasp(65535, 2) 
-    # Range: 65535=0... 
-    # Options: 0=None 
-    #          1=Instructions 
-    #          2=Smoothing 
+    gaspElement = TTGasp(65535, 2)
+    # Range: 65535=0...
+    # Options: 0=None
+    #          1=Instructions
+    #          2=Smoothing
     #          3=Instructions+Smoothing
-    
+
     # Add element to `gasp` array
     fl.font.ttinfo.gasp[0] = gaspElement
-    
+
     # Clear `hdmx` array
     for i in range(len(fl.font.ttinfo.hdmx)):
         try:
             del fl.font.ttinfo.hdmx[0]
         except:
             continue
-    
+
     # Uncheck "Create [vdmx] table", also
     # uncheck "Automatically add .null, CR and space characters"
     fl.font.ttinfo.head_flags = 0
@@ -491,27 +491,27 @@ def postProccessTTF(ttFont):
         pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
         report = '\n'.join(pp.communicate())
 
-    
+
     # Get TTX file name (on Windows, the file name is hard-coded)
     m = re.search(r"to\s+\"([^\"]+)\"", report) # ttx message: Dumping "font.ttf" to "font.ttx"...
     if not m:
         print "ERROR: Failed to extract source TTF font post table with 'ttx' tool. Report follows."
         print report
         return
-    
+
     # Read content of ttx file
     ttxFont = m.group(1) # ttx file name
-    
+
     # Open TTX file
     fp = open(ttxFont, "rt")
     ttxData = fp.read()
     fp.close()
-    
+
     # Rename glyphs
-    
 #     if ttxData.find('name="nonmarkingreturn"') != -1:
 #         ttxData = ttxData.replace('name="nonmarkingreturn"','name="CR"') # Replace glyph name in GlyphOrder table
 #         ttxData = ttxData.replace('</extraNames>','  <psName name="CR"/>\n    </extraNames>') # Add entry to post table
+
     if ttxData.find('name="nonbreakingspace"') != -1:
         ttxData = ttxData.replace('name="nonbreakingspace"','name="nbspace"')
         ttxData = ttxData.replace('</extraNames>','  <psName name="nbspace"/>\n    </extraNames>') # Add entry to post table
@@ -546,19 +546,19 @@ def postProccessTTF(ttFont):
         return
 
     newTTFName = m.group(1) # file name of new TT file, usually 'font#1.ttf'
-    
+
     # Check the file size; if it's zero it means that a TTX error/traceback happened
     if not os.path.getsize(newTTFName) > 0:
         print "ERROR: TTX error/traceback."
         return
-    
+
     # Delete files
     os.remove(ttFont) # This is the original TT font
     os.remove(ttxFont) # This is the temporary TTX file
-    
+
     if newTTFName != ttFont:
         os.rename(newTTFName, ttFont) # Renames the new file
-    
+
     # Return if successful
     print "Done."
     return 1
@@ -566,9 +566,9 @@ def postProccessTTF(ttFont):
 
 def convertTXTfontToPFA(txtPath):
     tempPFApath = txtPath.replace('.txt','_TEMP_.pfa')
-    
+
     command = 'type1 "%s" > "%s"' % (txtPath, tempPFApath)
-    
+
     # Run type1 tool
     if MAC:
         pp = os.popen(command)
@@ -579,15 +579,15 @@ def convertTXTfontToPFA(txtPath):
         out, err = pp.communicate()
         if err:
             print out, err
-    
+
     return tempPFApath
 
 
 def convertUFOfontToPFA(ufoPath):
     tempPFApath = ufoPath.replace('.ufo','_TEMP_.pfa')
-    
+
     command = 'tx -t1 "%s" > "%s"' % (ufoPath, tempPFApath)
-    
+
     # Run tx tool
     if MAC:
         pp = os.popen(command)
@@ -604,42 +604,42 @@ def convertUFOfontToPFA(ufoPath):
 
 def processFonts(fontsList):
     totalFonts = len(fontsList)
-    
+
     print "%d fonts found:\n%s\n" % (totalFonts, '\n'.join(fontsList))
-    
+
     setType1openPrefs()
     setTTgeneratePrefs()
     setTTautohintPrefs()
-    
+
     fontIndex = 1
     for pfaPath in fontsList:
 
         # Make temporary encoding file from GOADB file.
-        # This step needs to be done per font, because the directory tree selected 
+        # This step needs to be done per font, because the directory tree selected
         # may contain more than one family, or because the glyph set of a given family
         # may not be the same for both Roman/Upright and Italic/Sloped.
         encPath = None
         goadbPath = None
-    
+
         # The GOADB can be located in the same folder or up to two levels above in the directory tree
         sameLevel = os.path.join(os.path.dirname(pfaPath), kGOADBfileName)
         oneUp = os.path.join(os.path.dirname(os.path.dirname(pfaPath)), kGOADBfileName)
         twoUp = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(pfaPath))), kGOADBfileName)
-    
+
         if os.path.exists(sameLevel):
             goadbPath = sameLevel
         elif os.path.exists(oneUp):
             goadbPath = oneUp
         elif os.path.exists(twoUp):
             goadbPath = twoUp
-        
+
         if goadbPath:
             encPath = makeTempEncFileFromGOADB(goadbPath)
         else:
             print "Could not find %s file." % kGOADBfileName
             print "Skipping %s" % pfaPath
             print
-    
+
         if not encPath:
             continue
 
@@ -649,7 +649,7 @@ def processFonts(fontsList):
         for file in os.listdir(os.path.split(pfaPath)[0]):
             if re.search(r'derivedchars(.+?)?$', file) and dvModuleFound:
                 makeDV = True
-                
+
         fontIsTXT = False
         fontIsUFO = False
 
@@ -660,17 +660,17 @@ def processFonts(fontsList):
         elif kFontUFO in pfaPath or (pfaPath[-4:].lower() in [".ufo"]): # Support more than just files named "font.ufo"
             fontIsUFO = True
             pfaPath = convertUFOfontToPFA(pfaPath)
-        
+
         fl.Open(pfaPath)
         print "\nProcessing %s ... (%d/%d)" % (fl.font.font_name, fontIndex, totalFonts)
         fontIndex += 1
-    
+
         fontZonesWereReplaced = replaceFontZonesByFamilyZones()
         baselineZonesWereRemoved = removeBottomZonesAboveBaseline()
-        
-        # NOTE: After making changes to the PostScript alignment zones, the TrueType equivalents 
-        # have to be updated as well, but I couldn't find a way to do it via scripting (because 
-        # TTH.top_zones and TTH.bottom_zones are read-only, and despite that functionality being 
+
+        # NOTE: After making changes to the PostScript alignment zones, the TrueType equivalents
+        # have to be updated as well, but I couldn't find a way to do it via scripting (because
+        # TTH.top_zones and TTH.bottom_zones are read-only, and despite that functionality being
         # available in the UI, there's no native function to update TT zones from T1 zones).
         # So the solution is to generate a new T1 font and open it back.
         pfaPathTemp = pfaPath.replace('.pfa','_TEMP_.pfa')
@@ -681,28 +681,28 @@ def processFonts(fontsList):
             fl.Open(pfaPathTemp)
             if os.path.exists(infPathTemp): # Delete the .INF file (bug in FL v5.1.x)
                 os.remove(infPathTemp)
-    
-        
+
 #         addNULLandCRglyphs()
+
         # Load encoding file
         fl.font.encoding.Load(encPath)
-        
+
         # Make sure the Font window is in 'Names mode'
         fl.CallCommand(fl_cmd.FontModeNames)
-    
+
         # Sort glyphs by encoding
         fl.CallCommand(fl_cmd.FontSortByCodepage)
-        
+
         # read derivedchars file, make components
         if makeDV:
             dvInput_module.run(verbose = False)
-        
+
         convertT1toTT()
         changeTTfontSettings()
-        
+
         # Switch the Font window to 'Index mode'
         fl.CallCommand(fl_cmd.FontModeIndex)
-        
+
         folderPath, fontFileName = os.path.split(pfaPath)  # path to the folder where the font is contained and the font's file name
         ppmsFilePath = os.path.join(folderPath, kPPMsFileName)
         if os.path.exists(ppmsFilePath):
@@ -714,14 +714,14 @@ def processFonts(fontsList):
             inputTTHints.run(folderPath)
             # readTTHintsFile(tthintsFilePath)
             # replaceTTHints()
-         
+
         ttfPath = os.path.join(folderPath, kFontTTF) # The filename of the TT output is hardcoded
         fl.GenerateFont(eval("ftTRUETYPE"), ttfPath)
-        
+
         vfbPath = pfaPath.replace('.pfa','.vfb')
         fl.Save(vfbPath)
-        
-        fl.font.modified = 0    
+
+        fl.font.modified = 0
         fl.Close(fl.ifont)
 
         # The TT font generated with FontLab ends up with a few glyph names changed.
@@ -730,7 +730,7 @@ def processFonts(fontsList):
         if not postProccessTTF(ttfPath):
             print "ERROR: Failed to post-process the TrueType file."
             return
-        
+
         # Delete temporary Encoding file:
         if os.path.exists(encPath):
             os.remove(encPath)
@@ -738,7 +738,7 @@ def processFonts(fontsList):
         # Delete temp PFA:
         if os.path.exists(pfaPathTemp):
             os.remove(pfaPathTemp)
-        
+
         # Cleanup after processing from TXT type1 font or UFO font
         if fontIsTXT or fontIsUFO:
             if os.path.exists(pfaPath):
@@ -772,7 +772,7 @@ def run():
         processFonts(fontsList)
     else:
         print "No fonts found"
-    
+
     endTime = time.time()
     elapsedSeconds = endTime-startTime
 
