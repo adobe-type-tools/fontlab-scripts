@@ -72,6 +72,7 @@ alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
 import os
 from FL import *
+import itertools
 
 def readTTHintsFile(filePath):
 	file = open(filePath, "r")
@@ -94,6 +95,32 @@ def readTTHintsFile(filePath):
 			ttHintsList.append(line)
 	
 	return ttHintsList
+
+
+def findFuzzyPoint(glyphName, point, pointDict, fuzziness):
+	'''
+	Finds points that fall inside a fuzzy area around 
+	the original coordinate. If only one point is found
+	in that area, the point index will be returned. 
+	Otherwise returns None.
+
+	Solves off-by-one issues.
+	'''
+
+	fuzzyX = range(point[0]-fuzziness, point[0]+fuzziness+1,)
+	fuzzyY = range(point[1]-fuzziness, point[1]+fuzziness+1,)
+	fuzzyPoints = [fuzzyCoords for fuzzyCoords in itertools.product(fuzzyX, fuzzyY)]
+	allPoints = pointDict.keys()
+	overlap = set(allPoints) & set(fuzzyPoints)
+
+	if len(overlap) == 1:
+		# make sure that only one point is found within the fuzzy area
+		oldPoint = list(overlap)[0]
+		pointIndex = pointDict[oldPoint]
+		print '\tINFO: In glyph {}, point #{} has changed from {} to {}.'.format(glyphName, pointIndex, oldPoint, point)
+		return pointIndex
+	else:
+		return None
 
 
 def transformCommandList(glyph, raw_commandList):
@@ -126,8 +153,14 @@ def transformCommandList(glyph, raw_commandList):
 		elif isinstance(item, tuple):
 			'point coordinates'
 			pointIndex = pointDict.get(item, None)
+
 			if pointIndex == None:
-				print '\tERROR: point %s does not exist in glyph %s.' % (item, glyph.name)
+				# Try fuzziness if no exact coordinate match is found:
+				fuzzyPointIndex = findFuzzyPoint(glyph.name, item, pointDict, 1)
+				if fuzzyPointIndex != None:
+					pointIndex = fuzzyPointIndex
+				else:
+					print '\tERROR: point %s does not exist in glyph %s.' % (item, glyph.name)
 			output.append(pointIndex)
 		else:
 			'other hinting data, integers'
