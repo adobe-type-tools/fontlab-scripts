@@ -407,14 +407,25 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
                 continue
             
             indexOnlyRawHintingList.append(','.join(map(str,commandList)))
-            
+
             for hintedNodeIndex in nodes:
-                node = ttfont[gIndex][hintedNodeIndex]
+                targetGlyph = ttfont[gIndex]
+                node = targetGlyph[hintedNodeIndex]
+                sidebearingIndexes = [len(targetGlyph), len(targetGlyph)+1]
 
                 try:
                     node.type
+                    # This check makes sure that a referenced node index actually exist
+                    # in an outline. However, it also skips any glyphs with hinted 
+                    # sidebearings, because those 'nodes' are represented as len(glyph), 
+                    # and len(glyph)+1.
+
                 except:
-                    print "ERROR: Hinting problem in %s. Skipping glyph ..." % gName
+                    if hintedNodeIndex in sidebearingIndexes:
+                        print "ERROR: Sidebearings have been hinted in %s, which is not (yet) supported. Skipping glyph ..." % gName
+                    else:
+                        print "ERROR: Hinting problem in %s. Skipping glyph ..." % gName
+
                     okToProcessTargetFonts = False
                     continue
 
