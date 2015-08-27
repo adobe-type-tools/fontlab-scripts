@@ -192,6 +192,8 @@ def getGOADB2ndColumn(goadbList):
     re_match1stCol = re.compile(r"(\S+)\t(\S+)(\t\S+)?")
 
     for line in goadbList:
+        # allow for comments:
+        line = line.split('#')[0]
         # Skip over blank lines
         stripline = line.strip()
         if not stripline:
