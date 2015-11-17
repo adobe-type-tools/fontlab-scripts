@@ -32,7 +32,8 @@ If the external file already exists, the script will replace the existing
 entries and add new entries as needed.
 
 The script will emit an error if there are hints attached to off-curve
-points, but will still write those hints.
+points, but will still write those hints. If hints are attached to nonexistent
+points, the given glyph will not be written to the output file.
 
 Example output:
 n	5,13,14,1;5,22,0,1;1,9,0;1,2,0;2,0,0;2,14,0;14,4,9,0,0;4,9,18,0,-1;14,21,18,0,0
@@ -42,8 +43,11 @@ o	5,33,5,0;5,13,23,0;1,10,0;2,0,0;4,0,18,0,-1;4,10,28,0,-1
 ==================================================
 Versions:
 
+v1.5 - Nov 16 2015 - Do not write empty output data to tthints file
+					 (A bug which affected glyphs in which a nonexistent point
+					 was hinted. Reading those files made the reader choke.)
 v1.4 - Apr 17 2015 - Always write to a file named 'tthints' (even if the
-                     data uses point coordinates instead of point indexes).
+					 data uses point coordinates instead of point indexes).
 v1.3 - Mar 25 2015 - Allow optional coordinate output.
 					 Allow hinting sidebearings.
 v1.2 - Mar 23 2015 – Allow instructions in x-direction.
