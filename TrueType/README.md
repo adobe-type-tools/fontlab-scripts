@@ -1,9 +1,10 @@
 #FontLab scripts for TrueType
 
-These scripts all are tailored to a TrueType hinting workflow that invoves FontLab.
-Successfully tested in the following versions of FL:
+These scripts all are tailored to a TrueType hinting workflow that invoves 
+FontLab. Successfully tested in the following versions of FL:
 
 - FontLab 5.1.2 Build 4447 (Mac)
+- FontLab 5.1.5 Build 5714 (Mac)
 - FontLab 5.2.1 Build 4868 (Win)
 
 Dependencies (for `tthDupe.py`):
@@ -27,7 +28,7 @@ An easy workaround is launching FontLab from the command line, like this:
 
     open "/Applications/FontLab Studio 5.app"
 
-The scripts should then work as expected.  
+**This issue seems to have been fixed in Mac OS 10.11 _El Capitan_**
 
 
 ## Workflow
@@ -193,8 +194,9 @@ this information is read and applied to output files.
 
 ### `inputTTHints.py`
 _FontLab menu name: **Input TrueType Hints**_  
-Reads an applies the contents of a `tthints` file to an open VFB. It's indifferent
-if this file uses point indexes or point coordinates.
+Reads an applies the contents of a `tthints` file to an open VFB.  
+It is indifferent if this file references hints by point indexes or 
+point coordinates.
 
 
 ### `outputPPMs.py`
@@ -216,13 +218,17 @@ message if hints are attached to off-curve points, but still write them.
 
 ### `outputTTHints_coords.py`
 _FontLab menu name: **Output TrueType Hints\_coords**_  
-Like `outputTTHints.py`, but instead of point indexes, point coordinates are written. 
-This script can be useful in the case that a TTF-VFB file has been created 
-without the `convertToTTF.py` script (for instance directly in FontLab).
-Since `convertToTTF.py` makes some outline corrections, those outlines might not 
-perfectly match the previous conversion. Basically, this is an attempt to save 
-any hinting work that needs to be used in this workflow. 
-The data is written to a `tthints` file. 
+Like `outputTTHints.py`, but instead of point indexes, point coordinates are 
+written. This script can be useful in the case that a TTF-VFB file has been 
+created without the `convertToTTF.py` script (for instance directly from 
+FontLab).
+Since `convertToTTF.py` makes some outline corrections (e.g. fixing double 
+points, which FontLab will write) the resulting TT outlines might not 
+perfectly match the FontLab exported TT-outlines, and therefore point indexes
+won’t match.  
+Basically, the coordinate option is an attempt to save any hinting work that 
+already has been done before using this workflow. 
+The output data is written to a `tthints` file. 
 
 This script imports `outputTTHints.py` as a module and therefore needs to be in 
 the same folder.
@@ -234,15 +240,11 @@ Macro to duplicate `tthints` files across compatible styles. The script was
 created with the idea of re-using existing hinting patterns across different
 weights, cutting the time investment for TT hinting by a significant amount.
 The script is to be run from within FontLab, and does not need any of the
-involved fonts to be open.
-
-
-### `tthDupe_coords.py`
-_FontLab menu name: **TT Hints Duplicator\_coords**_  
-Like `tthDupe.py`, but instead of point indexes, point coordinates are written. 
-
-This script imports `tthDupe.py` as a module and therefore needs to be in 
-the same folder.
+involved fonts to be open.  
+If the template `tthints` file references hint attachements by point index, 
+point indexes will be written in the output file.  
+If the template `tthints` file references hint attachements by point coordinates, 
+point coordinates will be written in the output file. 
 
 
 __Important__: 
@@ -253,13 +255,16 @@ in both PS and TT outlines. Source glyphs that have instructions attached to
 off-curve points will be dropped from the resulting `tthints` files.
 
 2. The script will not duplicate Delta hints (by design), because Deltas are 
-size- and style specific. They will simply be left out of the resulting `tthints` 
-files. All the remaining hints of the glyph will be written. 
+size- and style specific. They will simply be left out of the resulting 
+`tthints` files. All the remaining hints of the glyph at hand will be written. 
 
 3. It is expected that overlaps are removed in the source files. This ensures 
 outline predictability. Depending on the drawing, this can mean some work for 
 compatibilizing all outlines, which is usually less work than hinting.
 
-3. Hinting of sidebearings is currently not supported in the duplicator script.
+4. Hinting of sidebearings is currently not supported in the duplicator script.
 
+5. Hinting of components is also currently not supported. While this is 
+possible in theory, many FL crashes prevent proper testing and proper 
+implementation of this desirable feature.
 
