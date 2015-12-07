@@ -66,8 +66,6 @@ Duplicating horizontal sidebearing-hints is not supported at this time.
 ==================================================
 Versions:
 
-v1.5 - Dec 07 2015 - Format for output files (point coordinates vs point indexes)
-                     is now automatically recognized based on the input file.
 v1.4 - Apr 18 2015 - Support reading instructions defined with point coordinates.
                      Add option to save instructions using point coordinates.
 v1.3 - Apr 02 2015 - Now also works in FL Windows.
@@ -241,7 +239,7 @@ def readTTHintsFile(filePath):
     - a list storing the glyph order of the input file
     - a dict {glyph name: raw hinting string}
     '''
-    writeCoordinates = False
+
     tthfile = open(filePath, "r")
     tthdata = tthfile.read()
     tthfile.close()
@@ -265,13 +263,7 @@ def readTTHintsFile(filePath):
                 glyphList.append(gName)
                 rawHintingDict[gName] = gHintingString
 
-    if '(' in lines[-1] and ')' in lines[-1]:
-        # checking if one (the last) line of the tthints file
-        # contains a coordinate tuple, which influences the format
-        # of the output file.
-        writeCoordinates = True
-
-    return glyphList, rawHintingDict, writeCoordinates
+    return glyphList, rawHintingDict
 
 
 def collectT1nodeIndexes(gName, t1font):
@@ -674,7 +666,7 @@ def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
             print out, err
 
 
-def run():
+def run(writeCoordinates=False):
 
     # Get the folder that contains the source hinting data, and source font files:
     templateFolderPath = fl.GetPathName("Select directory that contains the 'tthints' template file...")
@@ -721,8 +713,7 @@ def run():
 
     # Create a list of glyphs that have been hinted so it can be used as a filter.
     # The rawHintingDict contains a string of raw hinting data for each glyph:
-    glyphList, rawHintingDict, writeCoordinates = readTTHintsFile(tthintsFilePath)
-
+    glyphList, rawHintingDict = readTTHintsFile(tthintsFilePath)
     folderPathsList = getFolderPaths(baseFolderPath, templateFolderPath)
 
     if len(folderPathsList):
@@ -775,4 +766,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run(writeCoordinates=False)

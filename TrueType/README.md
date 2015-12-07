@@ -241,10 +241,14 @@ created with the idea of re-using existing hinting patterns across different
 weights, cutting the time investment for TT hinting by a significant amount.
 The script is to be run from within FontLab, and does not need any of the
 involved fonts to be open.  
-If the template `tthints` file references hint attachements by point index, 
-point indexes will be written in the output file.  
-If the template `tthints` file references hint attachements by point coordinates, 
-point coordinates will be written in the output file. 
+
+
+### `tthDupe_coords.py`
+_FontLab menu name: **TT Hints Duplicator\_coords**_  
+Like `tthDupe.py`, but instead of point indexes, point coordinates are written. 
+
+This script imports `tthDupe.py` as a module and therefore needs to be in 
+the same folder.
 
 
 __Important__: 
