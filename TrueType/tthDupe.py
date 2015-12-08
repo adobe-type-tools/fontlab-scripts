@@ -66,6 +66,8 @@ Duplicating horizontal sidebearing-hints is not supported at this time.
 ==================================================
 Versions:
 
+v1.5 - Dec 07 2015 - Point out major incompatibilities between TTF and CFF
+                     outlines, and do not duplicate recipes for those glyphs.
 v1.4 - Apr 18 2015 - Support reading instructions defined with point coordinates.
                      Add option to save instructions using point coordinates.
 v1.3 - Apr 02 2015 - Now also works in FL Windows.
@@ -459,33 +461,36 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
     templateTTdict = rawHintingDict[glyph.name]
 
     for templateTTindex in nodeIndexList:
-        templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
-        # try:
-        #     templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
-        # except KeyError:
-        #     templateT1index = None
-        #     print 'incompatibility', glyph.name
-
         try:
-            targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
-        except IndexError:
+            templateT1index = int(templateTTdict[templateTTindex].nodeIndexT1)
+        except KeyError:
+            templateT1index = None
+            print 'INFO: Major incompatibility (TTF vs CFF) in glyph %s.' % glyph.name
+            return
 
-            # Again, FontLab's fantastic ability to make a contour longer than it is, by re-inserting
-            # the first point a second time in position -1. In this case, the templateT1index is
-            # re-set to be the first point of the last contour, which makes no functional difference.
-            if templateT1index == len(glyph):
-                numberOfCountours = glyph.GetContoursNumber()
-                firstPointOfLastContour = glyph.GetContourBegin(numberOfCountours-1)
-                templateT1index = firstPointOfLastContour
+        if templateT1index != None:
+            try:
                 targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
-            else:
-                print 'I give up.'
+            except IndexError:
+                # Again, FontLab's fantastic ability to make a contour longer than it is, by re-inserting
+                # the first point a second time in position -1. In this case, the templateT1index is
+                # re-set to be the first point of the last contour, which makes no functional difference.
+                if templateT1index == len(glyph):
+                    numberOfCountours = glyph.GetContoursNumber()
+                    firstPointOfLastContour = glyph.GetContourBegin(numberOfCountours-1)
+                    templateT1index = firstPointOfLastContour
+                    targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+                else:
+                    print 'I give up.'
 
-        if targetT1nodeCoords in ttGlyphNodeIndexDict:
-            newTTindexesList.append(ttGlyphNodeIndexDict[targetT1nodeCoords])
-            newTTcoordsList.append(targetT1nodeCoords)
-        else:
-            print "Could not find target node in %s." % glyph.name
+            if targetT1nodeCoords in ttGlyphNodeIndexDict:
+                newTTindexesList.append(ttGlyphNodeIndexDict[targetT1nodeCoords])
+                newTTcoordsList.append(targetT1nodeCoords)
+            else:
+                print "Could not find target node in %s." % glyph.name
+                # It is probably better to not write the remaning hinting recipe for a
+                # given glyph at all if one of its points is not found in the target TTF.
+                return
 
     return newTTindexesList, newTTcoordsList
 
@@ -590,33 +595,53 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
                     elif commandType in alignments:
                         nodes = [commandList[1]]
-                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        hintParamsList = [commandList[-1]]
+                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes != None:
+                            writeLine = True
+                            targetNodeIndexList, targetNodeCoordsList = convertedNodes
+                            hintParamsList = [commandList[-1]]
+                        else:
+                            writeLine = False
+                            break
 
                     elif commandType in links:
                         nodes = commandList[1:3]
-                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        hintParamsList = commandList[3:]
+                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes != None:
+                            writeLine = True
+                            targetNodeIndexList, targetNodeCoordsList = convertedNodes
+                            hintParamsList = commandList[3:]
+                        else:
+                            writeLine = False
+                            break
 
                     elif commandType in interpolations:
                         nodes = commandList[1:-1]
-                        targetNodeIndexList, targetNodeCoordsList = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        hintParamsList = [commandList[-1]]
+                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes != None:
+                            writeLine = True
+                            targetNodeIndexList, targetNodeCoordsList = convertedNodes
+                            hintParamsList = [commandList[-1]]
+                        else:
+                            writeLine = False
+                            break
 
-                if writeCoordinates:
-                    targetNodeList = targetNodeCoordsList
-                else:
-                    targetNodeList = targetNodeIndexList
+                if writeLine:
+                    if writeCoordinates:
+                        targetNodeList = targetNodeCoordsList
+                    else:
+                        targetNodeList = targetNodeIndexList
 
-                newCommandList = [commandType] + targetNodeList + hintParamsList
-                newCommandString = ','.join(map(str, newCommandList))
+                    newCommandList = [commandType] + targetNodeList + hintParamsList
+                    newCommandString = ','.join(map(str, newCommandList))
 
-                newHintsList.append(newCommandString.replace(" ", ""))
+                    newHintsList.append(newCommandString.replace(" ", ""))
 
-            newHintsLine = "%s\t%s" % (gName, ';'.join(newHintsList))
-            if gMark:
-                newHintsLine = "%s\t%s" % (newHintsLine, gMark)
-            newTTHintsFileList.append(newHintsLine + "\n")
+            if writeLine:
+                newHintsLine = "%s\t%s" % (gName, ';'.join(newHintsList))
+                if gMark:
+                    newHintsLine = "%s\t%s" % (newHintsLine, gMark)
+                newTTHintsFileList.append(newHintsLine + "\n")
 
         saveNewTTHintsFile(targetFolderPath, newTTHintsFileList)
         closeAllOpenedFonts()
