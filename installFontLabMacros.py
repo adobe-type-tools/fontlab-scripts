@@ -38,12 +38,12 @@ def copyFile(srcPath, dstPath):
 			print "Copied: %s to dir %s" % (srcPath, dstPath)
 		else:
 			print "Failed to find src file '%s'." % (srcPath)
-			
+
 
 def copyDir(srcDirPath, destDirPath):
 	if not os.path.exists(destDirPath):
 		os.mkdir(destDirPath)
-		
+
 	fileList = os.listdir(srcDirPath)
 	for fileName in fileList:
 		srcPath = os.path.join(srcDirPath, fileName)
@@ -58,7 +58,7 @@ def copyDir(srcDirPath, destDirPath):
 			copyDir(srcPath, newDestDirPath)
 		else:
 			print "Say what? this file is neither a dir nor a regular file:", srcPath
-		
+
 def run():
 	# define where we will copy things
 	if len(sys.argv) != 2:
@@ -70,13 +70,13 @@ def run():
 	if not os.path.isdir(destBasePath):
 		print "The path you supplied does not exist or is not a directory. Try again."
 		return
-	
+
 	# Find the path to the <FDKRoot>/Tools/FontLab/
 	scriptDir = os.path.dirname(os.path.abspath(__file__)) # Tools/FontLab
-	
+
 
 	srcBasePath = os.path.join(scriptDir, "Macros")
-		
+
 	# copy all files from the other directories at this level to the directories of
 	# the same name under FontLab
 	dirList = os.listdir(srcBasePath)
@@ -86,7 +86,7 @@ def run():
 			continue
 		destDirPath = os.path.join(destBasePath, dirName)
 		copyDir(srcDirPath, destDirPath)
-		
+
 
 if __name__ == "__main__":
 	try:
