@@ -1,14 +1,14 @@
 #!/bin/env python
-#installFontLabMacros.py
+
 __copyright__ =  """
-Copyright 2015 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+Copyright 2015-2016 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
 This software is licensed as OpenSource, under the Apache License, Version 2.0. This license is available at: http://opensource.org/licenses/Apache-2.0. */
 """
 
 __doc__ = """
-v 1.2 Sep 15 2015
+v 2.0 Apr 11 2016
 
-Copies the Macros directory under the parent directory of this script file
+Copies the folders under the parent directory of this script file
 to the appropriate place under FontLab program's Macros directory.
 """
 
@@ -35,7 +35,7 @@ def copyFile(srcPath, dstPath):
 				print traceback.format_exception_only(sys.exc_type, sys.exc_value)[-1]
 				print "Quitting - not all files were copied."
 				raise InstallError
-			print "Copied: %s to dir %s" % (srcPath, dstPath)
+			print "Copied %s\n    to %s\n" % (srcPath, dstPath)
 		else:
 			print "Failed to find src file '%s'." % (srcPath)
 
@@ -62,29 +62,31 @@ def copyDir(srcDirPath, destDirPath):
 def run():
 	# define where we will copy things
 	if len(sys.argv) != 2:
-		print "You must provide the path to the FontLab Macros directory where the scripts should go."
-		print " An example for Mac OSX:"
-		print "python installFontLabMacros.py /Users/<your Mac user name>/Library/Application\ Support/FontLab/Studio\ 5/Macros"
+		print "You must provide the path to FontLab's Macros folder."
+		print "An example for Mac OSX:"
+		print "   python installFontLabMacros.py /Users/<your Mac user name>/Library/Application\ Support/FontLab/Studio\ 5/Macros"
 		return
 	destBasePath = sys.argv[1]
 	if not os.path.isdir(destBasePath):
 		print "The path you supplied does not exist or is not a directory. Try again."
 		return
 
-	# Find the path to the <FDKRoot>/Tools/FontLab/
-	scriptDir = os.path.dirname(os.path.abspath(__file__)) # Tools/FontLab
+	# get the path to the folder that contains this script
+	srcBasePath = os.path.dirname(os.path.abspath(__file__))
 
-
-	srcBasePath = os.path.join(scriptDir, "Macros")
-
-	# copy all files from the other directories at this level to the directories of
-	# the same name under FontLab
+	# copy all folders and their contents to FontLab's Macros folder.
+	# the Modules folder requires special handling
 	dirList = os.listdir(srcBasePath)
 	for dirName in dirList:
+		if dirName.startswith('.'):
+			continue
 		srcDirPath = os.path.join(srcBasePath, dirName)
 		if not os.path.isdir(srcDirPath):
 			continue
-		destDirPath = os.path.join(destBasePath, dirName)
+		if dirName == "Modules":
+			destDirPath = os.path.join(destBasePath, "System", dirName)
+		else:
+			destDirPath = os.path.join(destBasePath, dirName)
 		copyDir(srcDirPath, destDirPath)
 
 
