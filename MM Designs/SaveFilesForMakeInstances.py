@@ -11,12 +11,12 @@ kCompositeDataName = "temp.composite.dat"
 ###################################################
 
 __copyright__ =  """
-Copyright 2014 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
+Copyright 2014-2016 Adobe Systems Incorporated (http://www.adobe.com/). All Rights Reserved.
 This software is licensed as OpenSource, under the Apache License, Version 2.0. This license is available at: http://opensource.org/licenses/Apache-2.0.
 """
 
 __doc__ = """
-Save Files for MakeInstances v1.0 - February 15 2010
+Save Files for MakeInstances v2.0 - April 12 2016
 
 This script will do part of the work to create a set of single-master fonts
 ("instances") from a Multiple Master (MM) FontLab font. It will save a
@@ -25,7 +25,7 @@ a text file named 'temp.composite.dat' that contains data related with
 composite glyphs.
 
 You must then run the makeInstances program to actually build the instance Type 1
-fonts. makeInstances can remove working glyphs, and rename MM exception glyphs.
+fonts. makeInstances can remove working glyphs, and rename MM-exception glyphs.
 It will also do overlap removal, and autohint the instance fonts. This last is
 desirable, as autohinting which is specific to an instance font is usually
 significantly better than the hinting from interpolating the MM font hints.
@@ -52,6 +52,8 @@ documentation in the InstanceGenerator.py script.
 ==================================================
 
 Versions:
+v2.0 - Apr 12 2016 - Added step to fix the MM FontBBox values of the mmfont.pfa file,
+                     when the VFB's UPM value is not 1000 (long-standing FontLab bug).
 v1.0 - Feb 15 2010 - Initial release
 
 """
@@ -372,6 +374,66 @@ def saveCompositeInfo(fontMM, mmParentDir):
 	fp.close()
 
 
+def parseVals(valList):
+	valList = valList.split()
+	valList = map(eval, valList)
+	return valList
+
+
+def fixFontBBox(data, pfaPath):
+	bboxMatch = re.search(r"/FontBBox\s*\{\{([^}]+)\}\s*\{([^}]+)\}\s*\{([^}]+)\}\s*\{([^}]+)\}\}", data)
+	if not bboxMatch:
+		print "Failed to find MM FontBBox %s" % pfaPath
+		return
+	pfaBBox = [bboxMatch.group(1),  bboxMatch.group(2),  bboxMatch.group(3),  bboxMatch.group(4)]
+	pfaBBox = map(parseVals, pfaBBox)
+
+	print "Calculating correct MM FontBBox..."
+
+	mastersRange = range(fl.font.glyphs[0].layers_number)
+	flBBox = [[], [], [], []]
+	for i in range(4):
+		for m in mastersRange:
+			flBBox[i].append([])
+	c = 0
+	for flGlyph in fl.font.glyphs:
+		for m in mastersRange:
+			bbox = flGlyph.GetBoundingRect(m)
+			flBBox[0][m].append(bbox.ll.x)
+			flBBox[1][m].append(bbox.ll.y)
+			flBBox[2][m].append(bbox.ur.x)
+			flBBox[3][m].append(bbox.ur.y)
+
+	for m in mastersRange:
+		flBBox[0][m] = int( round( min(flBBox[0][m])) )
+		flBBox[1][m] = int( round( min(flBBox[1][m])) )
+		flBBox[2][m] = int( round( max(flBBox[2][m])) )
+		flBBox[3][m] = int( round( max(flBBox[3][m])) )
+	if pfaBBox == flBBox:
+		print "mmfont.pfa and fl.font have the same MM FontBBox values."
+	else:
+		matchGroups = bboxMatch.groups()
+		numGroups = 4 # by definition of regex above.
+		prefix = data[:bboxMatch.start(1)-1]
+		postfix = data[bboxMatch.end(4)+1:]
+		newString = []
+		for i in range(numGroups):
+			newString.append("{")
+			for m in mastersRange:
+				newString.append
+				newString.append("%s" % (flBBox[i][m]) )
+			newString.append("}")
+		newString = " ".join(newString)
+		data = prefix + newString + postfix
+		try:
+			fp = open(pfaPath, "wt")
+			fp.write(data)
+			fp.close()
+			print "Updated mmfont.pfa with correct MM FontBBox values."
+		except (OSError,IOError):
+			print "Failed to open and write %s" % pfaPath
+
+
 def saveFiles():
 	try:
 		parentDir = os.path.dirname(os.path.abspath(fl.font.file_name))
@@ -405,11 +467,28 @@ def saveFiles():
 	print "Saving Type 1 MM font file to:%s\t%s" % (os.linesep, pfaPath)
 	fl.GenerateFont(eval("ftTYPE1ASCII_MM"), pfaPath)
 
+	# Check if mmfont.pfa was indeed generated
+	if not os.path.exists(pfaPath):
+		print "Failed to find %s" % pfaPath
+		return
+
 	# Save the composite glyph data, but only if it's necessary
 	if (kExceptionSuffixes in instancesList[0] or kExtraGlyphs in instancesList[0]):
 		compositePath = os.path.join(parentDir, kCompositeDataName)
 		print "Saving composite glyphs data to:%s\t%s" % (os.linesep, compositePath)
 		saveCompositeInfo(fl.font, parentDir)
+
+	# Fix the FontBBox values if the font's UPM is not 1000
+	if fl.font.upm != 1000:
+		try:
+			fp = open(pfaPath, "rt")
+			data = fp.read()
+			fp.close()
+		except (OSError,IOError):
+			print "Failed to open and read %s" % pfaPath
+			return
+
+		fixFontBBox(data, pfaPath)
 
 	print "Done!"
 
@@ -429,6 +508,7 @@ def run():
 		return
 
 	else:
+		fl.output = ''
 		saveFiles()
 
 
