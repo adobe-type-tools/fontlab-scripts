@@ -19,34 +19,34 @@ __doc__ = """
 Save Files for MakeInstances v1.0 - February 15 2010
 
 This script will do part of the work to create a set of single-master fonts
-("instances") from a Multiple Master (MM) FontLab font. It will save a 
+("instances") from a Multiple Master (MM) FontLab font. It will save a
 Type 1 MM font (needed by the makeInstances program) and, in some cases,
-a text file named 'temp.composite.dat' that contains data related with 
+a text file named 'temp.composite.dat' that contains data related with
 composite glyphs.
 
-You must then run the makeInstances program to actually build the instance Type 1 
-fonts. makeInstances can remove working glyphs, and rename MM exception glyphs. 
-It will also do overlap removal, and autohint the instance fonts. This last is 
-desirable, as autohinting which is specific to an instance font is usually 
-significantly better than the hinting from interpolating the MM font hints. 
+You must then run the makeInstances program to actually build the instance Type 1
+fonts. makeInstances can remove working glyphs, and rename MM exception glyphs.
+It will also do overlap removal, and autohint the instance fonts. This last is
+desirable, as autohinting which is specific to an instance font is usually
+significantly better than the hinting from interpolating the MM font hints.
 As always with overlap removal, you should check all affected glyphs - it
 doesn't always do the right thing.
 
 Note that the makeInstances program can be run alone, given an MM Type1 font
 file. However, if you use the ExceptionSuffixes keyword, then you must run
-this script first. The script will make a file that identifies composite glyphs, 
-and allows makeInstances to correctly substitute contours in the composite glyph 
-from the exception glyph. This is necessary because FontLab cannot write all the 
-composite glyphs as Type 1 composites (also known as SEAC glyphs). This script 
-must be run again to renew this data file whenever changes are made to composite 
+this script first. The script will make a file that identifies composite glyphs,
+and allows makeInstances to correctly substitute contours in the composite glyph
+from the exception glyph. This is necessary because FontLab cannot write all the
+composite glyphs as Type 1 composites (also known as SEAC glyphs). This script
+must be run again to renew this data file whenever changes are made to composite
 glyphs.
 
 Both this script and the "makeInstances" program depend on info provided by an
-external text file named "instances", which contains all the instance-specific 
-values. The "instances" file must be a simple text file, located in the same 
-folder as the MM FontLab file. 
+external text file named "instances", which contains all the instance-specific
+values. The "instances" file must be a simple text file, located in the same
+folder as the MM FontLab file.
 
-For information on how to format the "instances" file, please read the 
+For information on how to format the "instances" file, please read the
 documentation in the InstanceGenerator.py script.
 
 ==================================================
@@ -109,7 +109,7 @@ kMaxStemSnapSize = 12 # including StdStem
 
 class ParseError(ValueError):
 	pass
-	
+
 
 def validateArrayValues(arrayList, valuesMustBePositive):
 	for i in range(len(arrayList)):
@@ -127,19 +127,19 @@ def readInstanceFile(instancesFilePath):
 	f = open(instancesFilePath, "rt")
 	data = f.read()
 	f.close()
-	
+
 	lines = data.splitlines()
-	
+
 	i = 0
 	parseError = 0
 	keyDict = copy.copy(kFixedFieldKeys)
 	numKeys = kNumFixedFields
 	numLines = len(lines)
 	instancesList = []
-	
+
 	for i in range(numLines):
 		line = lines[i]
-		
+
 		# Skip over blank lines
 		line2 = line.strip()
 		if not line2:
@@ -175,7 +175,7 @@ def readInstanceFile(instancesFilePath):
 			print "ERROR: In line %s, the number of fields %s does not match the number of key names %s (FamilyName, FontName, FullName, Weight, Coords, IsBold)." % (i+1, numFields, numKeys)
 			parseError = 1
 			continue
-		
+
 		instanceDict= {}
 		#Build a dict from key to value. Some kinds of values needs special processing.
 		for k in range(numFields):
@@ -194,7 +194,7 @@ def readInstanceFile(instancesFilePath):
 			elif key in [kIsBoldKey, kIsItalicKey, kCoordsKey]:
 				try:
 					value = eval(field) # this works for all three fields.
-					
+
 					if key == kIsBoldKey: # need to convert to Type 1 field key.
 						instanceDict[key] = value
 						# add kForceBold key.
@@ -218,13 +218,13 @@ def readInstanceFile(instancesFilePath):
 
 			elif field[0] in ["[","{"]: # it is a Type 1 array value. Turn it into a list and verify that there's an even number of values for the alignment zones
 				value = field[1:-1].split() # Remove the begin and end brackets/braces, and make a list
-				
+
 				if key in kAlignmentZonesKeys:
 					if len(value) % 2 != 0:
 						print "ERROR: In line %s, the %s field does not have an even number of values." % (i+1, key)
 						parseError = 1
 						continue
-				
+
 				if key in kTopAlignZonesKeys: # The Type 1 spec only allows 7 top zones (7 pairs of values)
 					if len(value) > kMaxTopZonesSize:
 						print "ERROR: In line %s, the %s field has more than %d values." % (i+1, key, kMaxTopZonesSize)
@@ -242,7 +242,7 @@ def readInstanceFile(instancesFilePath):
 					value.sort()
 					if currentArray != value:
 						print "WARNING: In line %s, the values in the %s field were sorted in ascending order." % (i+1, key)
-				
+
 				if key in kBotAlignZonesKeys: # The Type 1 spec only allows 5 top zones (5 pairs of values)
 					if len(value) > kMaxBotZonesSize:
 						print "ERROR: In line %s, the %s field has more than %d values." % (i+1, key, kMaxBotZonesSize)
@@ -260,7 +260,7 @@ def readInstanceFile(instancesFilePath):
 					value.sort()
 					if currentArray != value:
 						print "WARNING: In line %s, the values in the %s field were sorted in ascending order." % (i+1, key)
-				
+
 				if key in kStdStemsKeys:
 					if len(value) > kMaxStdStemsSize:
 						print "ERROR: In line %s, the %s field can only have %d value." % (i+1, key, kMaxStdStemsSize)
@@ -274,7 +274,7 @@ def readInstanceFile(instancesFilePath):
 							print "ERROR: In line %s, the %s field has an invalid value." % (i+1, key)
 							parseError = 1
 							continue
-				
+
 				if key in kStemSnapKeys: # The Type 1 spec only allows 12 stem widths, including 1 standard stem
 					if len(value) > kMaxStemSnapSize:
 						print "ERROR: In line %s, the %s field has more than %d values." % (i+1, key, kMaxStemSnapSize)
@@ -298,9 +298,9 @@ def readInstanceFile(instancesFilePath):
 					value = field #it is a Type 1 number. Pass as is, as a string.
 				else:
 					value = field
-			
+
 			instanceDict[key] = value
-				
+
 		if (kStdHW in instanceDict and kStemSnapH not in instanceDict) or (kStdHW not in instanceDict and kStemSnapH in instanceDict):
 			print "ERROR: In line %s, either the %s value or the %s values are missing or were invalid." % (i+1, kStdHW, kStemSnapH)
 			parseError = 1
@@ -316,12 +316,12 @@ def readInstanceFile(instancesFilePath):
 			if instanceDict[kStemSnapV][0] != instanceDict[kStdVW][0]:
 				print "ERROR: In line %s, the first value in %s must be the same as the %s value." % (i+1, kStemSnapV, kStdVW)
 				parseError = 1
-		
+
 		instancesList.append(instanceDict)
-		
+
 	if parseError or len(instancesList) == 0:
 		raise(ParseError)
-		
+
 	return instancesList
 
 
@@ -366,11 +366,11 @@ def saveCompositeInfo(fontMM, mmParentDir):
 			else:
 				compList.append([compName, pathIndex, None])
 			pathIndex += compGlyph.GetContoursNumber()
-			
+
 	fp = open(filePath, "wt")
 	fp.write(repr(glyphDict))
 	fp.close()
-				
+
 
 def saveFiles():
 	try:
@@ -380,7 +380,7 @@ def saveFiles():
 		return
 
 	instancesFilePath = os.path.join(parentDir, kInstancesDataFileName)
-	
+
 	if not os.path.isfile(instancesFilePath):
 		print "Could not find the file named '%s' in the path below\n\t%s" % (kInstancesDataFileName, parentDir)
 		return
@@ -404,7 +404,7 @@ def saveFiles():
 	pfaPath = os.path.join(parentDir, kDefaultMMFontFileName)
 	print "Saving Type 1 MM font file to:%s\t%s" % (os.linesep, pfaPath)
 	fl.GenerateFont(eval("ftTYPE1ASCII_MM"), pfaPath)
-	
+
 	# Save the composite glyph data, but only if it's necessary
 	if (kExceptionSuffixes in instancesList[0] or kExtraGlyphs in instancesList[0]):
 		compositePath = os.path.join(parentDir, kCompositeDataName)
