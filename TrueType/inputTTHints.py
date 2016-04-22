@@ -34,7 +34,7 @@ of glyphs, and will apply this data to the glyphs of an open VFB.
 Versions:
 
 v1.4 - Apr 17 2015 - Remove unneeded coord_option, now that hints expressed with
-                     point coordinates are saved as 'tthints' instead of 'tthints_coords'.
+					 point coordinates are saved as 'tthints' instead of 'tthints_coords'.
 v1.3 - Mar 24 2015 - Enable reading 'tthints_coords' file with coordinates.
 v1.2 - Mar 23 2015 - Enable instructions in x-direction.
 v1.1 - Sep 07 2013 - Enable the reading of 'tthints' files with an optional
@@ -289,7 +289,10 @@ def applyTTHints(ttHintsList):
 
 		if len(tth.commands):
 			tth.SaveProgram(glyph)
-			glyph.mark = int(gMark)
+			if readingError:
+				glyph.mark = 12
+			else:
+				glyph.mark = int(gMark)
 			fl.UpdateGlyph(gIndex)
 			glyphsHinted += 1
 
