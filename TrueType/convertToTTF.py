@@ -719,6 +719,14 @@ def processFonts(fontsList):
                         os.remove(finalVFBpath)
                     os.rename(vfbPath, finalVFBpath)
 
+            # remove FontLab leftovers
+            pfmPath = pfaPathTemp.replace('.pfa', '.pfm')
+            afmPath = pfaPathTemp.replace('.pfa', '.afm')
+            if os.path.exists(pfmPath):
+                os.remove(pfmPath)
+            if os.path.exists(afmPath):
+                os.remove(afmPath)
+
 
 def run():
     # Get folder to process
