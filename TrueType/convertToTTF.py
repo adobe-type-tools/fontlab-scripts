@@ -715,7 +715,7 @@ def processFonts(fontsList):
             if os.path.exists(vfbPath):
                 finalVFBpath = vfbPath.replace('_TEMP_.vfb','.vfb')
                 if finalVFBpath != vfbPath:
-                    if PC:
+                    if PC and os.path.exists(finalVFBpath):
                         os.remove(finalVFBpath)
                     os.rename(vfbPath, finalVFBpath)
 
