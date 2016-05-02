@@ -133,20 +133,20 @@ if PC:
 # ----------------------------------------------------------------------------------------
 # Import the FDK-embedded fontTools
 if MAC:
-	osFolderName = "osx"
+    osFolderName = "osx"
 if PC:
-	osFolderName = "win"
+    osFolderName = "win"
 
 fontToolsPath = os.sep.join((os.path.expanduser('~'), 'bin', 'FDK', 'Tools', osFolderName, 'Python', 'AFDKOPython27', 'lib', 'python2.7', 'site-packages', 'FontTools'))
 
 if fontToolsPath not in sys.path:
-	sys.path.append(fontToolsPath)
+    sys.path.append(fontToolsPath)
 
 try:
-	from fontTools import ttLib
+    from fontTools import ttLib
 except ImportError:
-	print "\nERROR: FontTools Python module is not installed.\n       Get the latest version at https://github.com/behdad/fonttools"
-	errorHappened = True
+    print "\nERROR: FontTools Python module is not installed.\n       Get the latest version at https://github.com/behdad/fonttools"
+    errorHappened = True
 
 
 # ----------------------------------------------------------------------------------------
