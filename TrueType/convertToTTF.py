@@ -488,17 +488,35 @@ def postProccessTTF(fontFilePath):
     - change FontLab-generated glyph name 'nonmarkingspace' to 'nbspace'
     - edit `prep` table to stop hints being active at 96 ppm and above.
     '''
+    print "Post-processing font.ttf file..."
     font = ttLib.TTFont(fontFilePath)
     glyphOrder = font.getGlyphOrder()
     postTable = font['post']
     prepTable = font['prep']
+    glyfTable = font['glyf']
+    hmtxTable = font['hmtx']
 
-    # Change name of 'nonbreakingspace' in GlyphOrder
-    glyphOrder[glyphOrder.index("nonbreakingspace")] = "nbspace"
-    font.setGlyphOrder(glyphOrder)
+    # Change name of 'nonbreakingspace' to 'nbspace' in GlyphOrder
+    # and glyf table and add it to post table
+    if "nonbreakingspace" in glyphOrder:
+        updateGlyphOrder = True
+        glyphOrder[glyphOrder.index("nonbreakingspace")] = "nbspace"
+        font.setGlyphOrder(glyphOrder)
+        glyfTable.glyphs["nbspace"] = glyfTable.glyphs["nonbreakingspace"]
+        del glyfTable.glyphs["nonbreakingspace"]
+        hmtxTable.metrics["nbspace"] = hmtxTable.metrics["nonbreakingspace"]
+        del hmtxTable.metrics["nonbreakingspace"]
+        postTable.extraNames.append("nbspace")
 
-    # Add 'nbspace' name to post table
-    postTable.extraNames.append("nbspace")
+    # Delete NULL and CR
+    for gName in ["NULL", "nonmarkingreturn"]:
+        if gName in glyphOrder:
+            del glyphOrder[glyphOrder.index(gName)]
+            font.setGlyphOrder(glyphOrder)
+            del glyfTable.glyphs[gName]
+            del hmtxTable.metrics[gName]
+        if gName in postTable.extraNames:
+            del postTable.extraNames[postTable.extraNames.index(gName)]
 
     # Extend the prep table
     # If the last byte is
@@ -680,11 +698,18 @@ def processFonts(fontsList):
             # readTTHintsFile(tthintsFilePath)
             # replaceTTHints()
 
-        ttfPath = os.path.join(folderPath, kFontTTF) # The filename of the TT output is hardcoded
-        fl.GenerateFont(eval("ftTRUETYPE"), ttfPath)
+        # FontLab 5.1.5 Mac Build 5714 does NOT respect the unchecked
+        # option "Automatically add .null, CR and space characters"
+        for gName in ["NULL", "CR"]:
+            gIndex = fl.font.FindGlyph(gName)
+            if gIndex != -1:
+                del fl.font.glyphs[gIndex]
 
         vfbPath = pfaPath.replace('.pfa','.vfb')
         fl.Save(vfbPath)
+
+        ttfPath = os.path.join(folderPath, kFontTTF) # The filename of the TT output is hardcoded
+        fl.GenerateFont(eval("ftTRUETYPE"), ttfPath)
 
         fl[fl.ifont].modified = 0
         fl.Close(fl.ifont)
