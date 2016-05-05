@@ -774,7 +774,7 @@ def run():
     if (elapsedSeconds/60) < 1:
         print '\nCompleted in %.1f seconds.\n' % elapsedSeconds
     else:
-        print '\nCompleted in %s minutes and %s seconds.\n' % (elapsedSeconds/60, elapsedSeconds%60)
+        print '\nCompleted in %d minutes and %d seconds.\n' % (elapsedSeconds/60, elapsedSeconds%60)
 
 
 if __name__ == "__main__":
