@@ -326,7 +326,11 @@ def doHinting(options):
 
 		logMsg("Autohinting starting for font", os.path.basename(filePath), time.asctime())
 		lenFont = len(font)
-		fontInfo = BezChar.GetACFontInfoFromFLFont(font)
+		if options.noFlex:
+			FlexOK = 'false'
+		else:
+			FlexOK = 'true'
+		fontInfo = BezChar.GetACFontInfoFromFLFont(font, FlexOK)
 		fp = open(options.tempFI, "wt") # For name-keyed ofnts, there is only one fontinfo string.
 		fp.write(fontInfo)
 		fp.close()
@@ -432,7 +436,7 @@ def Run_AC(flGlyph, fontInfo, fontPlist, options, isNewPlistFile):
 		else:
 			suppressEditArg = " -e"
 	
-		if options.noHintSubstitions:
+		if options.noHintSub:
 			supressHintSubArg = " -n"
 		else:
 			supressHintSubArg = ""
@@ -582,9 +586,9 @@ class ACOptions:
 		self.doReHintUnknown = 1
 		self.doHintAll = 0
 		self.allowPathChanges = 0
-		self.noHintSubstitions = 0
-		self.beVerbose = 1
 		self.noHintSub = 0
+		self.noFlex = 0
+		self.beVerbose = 1
 		self.debug = 0
 
 		# items not written to prefs
@@ -685,10 +689,11 @@ class ACDialog:
 		buttonSpace = 20
 		yt2 = yt1 + 30
 		yt3 = yt2 + 30
-		yt4 = yt3 + 40
-		yt5 = yt4 + 35		
+		yt4 = yt3 + 30
+		yt5 = yt4 + 40
 		yt6 = yt5 + 35		
-		lastY = yt6 + 40
+		yt7 = yt6 + 35		
+		lastY = yt7 + 40
 
 		dHeight = lastY + 50
 		
@@ -730,14 +735,16 @@ class ACDialog:
 		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt1, xt1+300, yt1+30), "allowPathChanges", STYLE_CHECKBOX, "Allow changes to glyph outline") 
 
 		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt2, xt1+300, yt2+30), "noHintSub", STYLE_CHECKBOX, "Do not allow hint replacement.") 
+		
+		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt3, xt1+300, yt3+30), "noFlex", STYLE_CHECKBOX, "No flex hints.") 
 
-		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt3, xt1+300, yt3+30), "beVerbose", STYLE_CHECKBOX, "Verbose progress") 
+		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt4, xt1+300, yt4+30), "beVerbose", STYLE_CHECKBOX, "Verbose progress") 
 
-		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt4, xt1+400, yt4+30), "doHistoryFile", STYLE_CHECKBOX, "Maintain history file") 
+		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt5, xt1+400, yt5+30), "doHistoryFile", STYLE_CHECKBOX, "Maintain history file") 
 
-		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt5, xt1+400, yt5+30), "doReHintUnknown", STYLE_CHECKBOX, "Re-hint unknown glyphs. (Warning: these may have been manually hinted.)") 
+		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt6, xt1+400, yt6+30), "doReHintUnknown", STYLE_CHECKBOX, "Re-hint unknown glyphs. (Warning: these may have been manually hinted.)") 
 
-		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt6, xt1+300, yt6+30), "doHintAll", STYLE_CHECKBOX, "Hint all specified glyphs") 
+		self.d.AddControl(CHECKBOXCONTROL, Rect(xt1, yt7, xt1+300, yt7+30), "doHintAll", STYLE_CHECKBOX, "Hint all specified glyphs") 
 
 		helpYPos =  dHeight-35
 		self.d.AddControl(BUTTONCONTROL, Rect(xt1, helpYPos, xt1+60, helpYPos+20), "help", STYLE_BUTTON, "Help") 
@@ -795,6 +802,9 @@ class ACDialog:
 
 	def on_noHintSub(self, code):
 		self.d.GetValue("noHintSub")
+		
+	def on_noFlex(self, code):
+		self.d.GetValue("noFlex")
 
 	def on_beVerbose(self, code):
 		self.d.GetValue("beVerbose")
