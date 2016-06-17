@@ -42,6 +42,7 @@ run from the same folder.
 
 Versions:
 
+v1.7 - Jun 17 2016 - Skip 'prep' table processing if the font doesn't have it.
 v1.6 - Apr 25 2016 - Replace ttx commands by fontTools operations.
 v1.5 - Jul 17 2015 - Turn off the addition of NULL and CR glyphs.
 v1.4 - Apr 17 2015 - Support changes made to inputTTHints module.
@@ -492,7 +493,10 @@ def postProccessTTF(fontFilePath):
     font = ttLib.TTFont(fontFilePath)
     glyphOrder = font.getGlyphOrder()
     postTable = font['post']
-    prepTable = font['prep']
+    if 'prep' in font.keys():
+    	prepTable = font['prep']
+    else:
+    	prepTable = None
     glyfTable = font['glyf']
     hmtxTable = font['hmtx']
 
@@ -536,8 +540,9 @@ def postProccessTTF(fontFilePath):
     #     PUSHB[ ]	/* 1 value pushed */
     #     1
     #     INSTCTRL[ ]	/* SetInstrExecControl */
-    if prepTable.program.bytecode[-1] == 68:
-        prepTable.program.bytecode.extend([75, 184, 0, 96, 82, 88, 176, 1, 27, 176, 0, 89, 176, 1, 142])
+	if prepTable:
+		if prepTable.program.bytecode[-1] == 68:
+			prepTable.program.bytecode.extend([75, 184, 0, 96, 82, 88, 176, 1, 27, 176, 0, 89, 176, 1, 142])
 
     # Save the changes
     folderPath, fontFileName = os.path.split(fontFilePath)
