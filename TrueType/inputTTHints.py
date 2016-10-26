@@ -50,6 +50,7 @@ v1.0 - Jan 07 2013 - Initial release.
 # ----------------------------------------
 
 debugMode = False
+report = []
 
 # ----------------------------------------
 
@@ -135,8 +136,10 @@ def findFuzzyPoint(glyphName, point, pointDict, fuzziness):
         pointIndex = pointDict[oldPoint]
         fuzzyPoints.setdefault(glyphName, [])
         if not (oldPoint, point) in fuzzyPoints[glyphName]:
-            print '\tINFO: In glyph {}, point #{} has changed from {} to {}.'.format(
+            pointChange_msg = '\tINFO: In glyph {}, point #{} has changed from {} to {}.'.format(
                 glyphName, pointIndex, oldPoint, point)
+            report.append(pointChange_msg)
+            print pointChange_msg
             fuzzyPoints[glyphName].append((oldPoint, point))
 
         return pointIndex
@@ -167,13 +170,13 @@ def transformCommandList(glyph, raw_commandList):
 
     for item in raw_commandList:
         if item == 'BL':
-            'left sidebearing hinted'
+            # left sidebearing hinted
             output.append(len(glyph))
         elif item == 'BR':
-            'right sidebearing hinted'
+            # right sidebearing hinted
             output.append(len(glyph) + 1)
         elif isinstance(item, tuple):
-            'point coordinates'
+            # point coordinates
             pointIndex = pointDict.get(item, None)
 
             if pointIndex is None:
@@ -185,8 +188,10 @@ def transformCommandList(glyph, raw_commandList):
                 else:
                     pointErrors.setdefault(glyph.name, [])
                     if item not in pointErrors[glyph.name]:
-                        print '\tERROR: point %s does not exist in glyph %s.' % (
+                        pointError_msg = '\tERROR: point %s does not exist in glyph %s.' % (
                             item, glyph.name)
+                        report.append(pointError_msg)
+                        print pointError_msg
                         pointErrors[glyph.name].append(item)
 
             output.append(pointIndex)
@@ -215,7 +220,9 @@ def applyTTHints(ttHintsList):
             hintItems.append(80)  # green
 
         else:
-            print "ERROR: This hint definition does not have the correct format\n\t%s" % line
+            hintDefError_msg = "ERROR: This hint definition does not have the correct format\n\t%s" % line
+            report.append(hintDefError_msg)
+            print hintDefError_msg
             continue
 
         gName, gHintsString, gMark = hintItems
@@ -271,7 +278,8 @@ def applyTTHints(ttHintsList):
             elif commandType in alignments + interpolations:
                 nodes = commandList[1:-1]
             else:
-                print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)
+                print "WARNING: Hint type %d in glyph %s is not supported." % (
+                    commandType, gName)
                 paramError = True
                 nodes = []
 
@@ -294,8 +302,10 @@ def applyTTHints(ttHintsList):
                 tth.commands.append(ttc)
 
         if readingError:
-            print '\tProblems with reading hinting recipe of glyph %s\n' % (
+            readError_msg = '\tProblems with reading hinting recipe of glyph %s\n' % (
                 gName)
+            report.append(readError_msg)
+            print readError_msg
 
         if len(tth.commands):
             tth.SaveProgram(glyph)
@@ -312,10 +322,14 @@ def applyTTHints(ttHintsList):
 
 def run(parentDir):
     kTTHintsFileName = "tthints"
+    kReportFileName = "ttinput_report.txt"
 
     tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
+    reportFilePath = os.path.join(parentDir, kReportFileName)
+
     if os.path.exists(tthintsFilePath):
         print 'Reading', tthintsFilePath
+        report.append(tthintsFilePath)
         ttHintsList = readTTHintsFile(tthintsFilePath)
     else:
         print "Could not find the %s file at %s" % (
@@ -330,13 +344,19 @@ def run(parentDir):
             kTTHintsFileName, tthintsFilePath)
         return
 
+    if len(report):
+        # Write the error report to a file, because FL's output
+        # window is a bit too ephemeral.
+        with open(reportFilePath, 'w') as rf:
+            rf.write('\n'.join(report))
+
 
 def preRun():
     # Clear the Output window
     fl.output = '\n'
 
     if fl.count == 0:
-        print "Open a font first."
+        print "Please open a font first."
         return
 
     font = fl.font
