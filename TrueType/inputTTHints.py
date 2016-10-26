@@ -1,7 +1,11 @@
 #FLM: Input TrueType Hints
 # coding: utf-8
 
-__copyright__ = __license__ =  """
+import os
+from FL import *
+import itertools
+
+__copyright__ = __license__ = """
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -27,14 +31,15 @@ __doc__ = """
 Input TrueType Hints
 
 This FontLab macro will read an external simple text file `tthints` containing
-TrueType instructions and hinted point indexes or point coordinates for a number
-of glyphs, and will apply this data to the glyphs of an open VFB.
+TrueType instructions and hinted point indexes or point coordinates for a
+number of glyphs, and will apply this data to the glyphs of an open VFB.
 
 ==================================================
 Versions:
 
-v1.4 - Apr 17 2015 - Remove unneeded coord_option, now that hints expressed with
-                     point coordinates are saved as 'tthints' instead of 'tthints_coords'.
+v1.4 - Apr 17 2015 - Remove unneeded coord_option, now that hints expressed
+                     with point coordinates are saved as 'tthints' instead of
+                     'tthints_coords'.
 v1.3 - Mar 24 2015 - Enable reading 'tthints_coords' file with coordinates.
 v1.2 - Mar 23 2015 - Enable instructions in x-direction.
 v1.1 - Sep 07 2013 - Enable the reading of 'tthints' files with an optional
@@ -42,11 +47,11 @@ v1.1 - Sep 07 2013 - Enable the reading of 'tthints' files with an optional
 v1.0 - Jan 07 2013 - Initial release.
 """
 
-#----------------------------------------
+# ----------------------------------------
 
 debugMode = False
 
-#----------------------------------------
+# ----------------------------------------
 
 vAlignLinkTop = 1
 vAlignLinkBottom = 2
@@ -68,9 +73,11 @@ interpolations = [hInterpolateLink, vInterpolateLink]
 links = [hSingleLink, hDoubleLink, vSingleLink, vDoubleLink]
 alignments = [vAlignLinkTop, vAlignLinkNear, vAlignLinkBottom, hAlignLinkNear]
 
-#----------------------------------------
+# ----------------------------------------
+
 fuzziness = 2
-# Defines area to search for a point that might have moved in TT transformation.
+# Defines area to search for a point that might have moved
+# in transformation to TT.
 # 0 =  1 possibility (the exact point coordinates)
 # 1 =  9 possibilities (1 step in each direction from original point)
 # 2 = 25 possibilities (2 steps in each direction)
@@ -78,11 +85,9 @@ fuzziness = 2
 
 pointErrors = {}
 fuzzyPoints = {}
-#----------------------------------------
 
-import os
-from FL import *
-import itertools
+# ----------------------------------------
+
 
 def readTTHintsFile(filePath):
     file = open(filePath, "r")
@@ -119,7 +124,8 @@ def findFuzzyPoint(glyphName, point, pointDict, fuzziness):
 
     fuzzyX = range(point[0]-fuzziness, point[0]+fuzziness+1,)
     fuzzyY = range(point[1]-fuzziness, point[1]+fuzziness+1,)
-    possibleFuzzyPoints = [fuzzyCoords for fuzzyCoords in itertools.product(fuzzyX, fuzzyY)]
+    possibleFuzzyPoints = [
+        fuzzyCoords for fuzzyCoords in itertools.product(fuzzyX, fuzzyY)]
     allPoints = pointDict.keys()
     overlap = set(allPoints) & set(possibleFuzzyPoints)
 
@@ -129,7 +135,8 @@ def findFuzzyPoint(glyphName, point, pointDict, fuzziness):
         pointIndex = pointDict[oldPoint]
         fuzzyPoints.setdefault(glyphName, [])
         if not (oldPoint, point) in fuzzyPoints[glyphName]:
-            print '\tINFO: In glyph {}, point #{} has changed from {} to {}.'.format(glyphName, pointIndex, oldPoint, point)
+            print '\tINFO: In glyph {}, point #{} has changed from {} to {}.'.format(
+                glyphName, pointIndex, oldPoint, point)
             fuzzyPoints[glyphName].append((oldPoint, point))
 
         return pointIndex
@@ -153,8 +160,9 @@ def transformCommandList(glyph, raw_commandList):
 
     '''
 
-    # pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
-    pointDict = dict(((point.x, point.y), pointIndex) for pointIndex, point in enumerate(glyph.nodes))
+    pointDict = dict(
+        ((point.x, point.y), pointIndex)
+        for pointIndex, point in enumerate(glyph.nodes))
     output = []
 
     for item in raw_commandList:
@@ -168,15 +176,17 @@ def transformCommandList(glyph, raw_commandList):
             'point coordinates'
             pointIndex = pointDict.get(item, None)
 
-            if pointIndex == None:
+            if pointIndex is None:
                 # Try fuzziness if no exact coordinate match is found:
-                fuzzyPointIndex = findFuzzyPoint(glyph.name, item, pointDict, fuzziness)
-                if fuzzyPointIndex != None:
+                fuzzyPointIndex = findFuzzyPoint(
+                    glyph.name, item, pointDict, fuzziness)
+                if fuzzyPointIndex is not None:
                     pointIndex = fuzzyPointIndex
                 else:
                     pointErrors.setdefault(glyph.name, [])
-                    if not item in pointErrors[glyph.name]:
-                        print '\tERROR: point %s does not exist in glyph %s.' % (item, glyph.name)
+                    if item not in pointErrors[glyph.name]:
+                        print '\tERROR: point %s does not exist in glyph %s.' % (
+                            item, glyph.name)
                         pointErrors[glyph.name].append(item)
 
             output.append(pointIndex)
@@ -202,7 +212,7 @@ def applyTTHints(ttHintsList):
 
         elif len(hintItems) == 2:
             'line does not contain mark color'
-            hintItems.append(80) # green
+            hintItems.append(80)  # green
 
         else:
             print "ERROR: This hint definition does not have the correct format\n\t%s" % line
@@ -252,7 +262,6 @@ def applyTTHints(ttHintsList):
                 print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (gName, commandType, vAlignLinkTop, vFinDelta)
                 continue
 
-
             paramError = False
 
             if commandType in deltas:
@@ -273,10 +282,10 @@ def applyTTHints(ttHintsList):
                     if nodeIndex in range(len(glyph), len(glyph)+2):
                         pass
                     else:
-                        print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (gName, nodeIndex)
+                        print "ERROR: A hint definition for glyph %s is referencing an invalid node index: %s" % (
+                            gName, nodeIndex)
                         paramError = True
                         break
-
 
             for i, item in enumerate(commandList[1:]):
                 ttc.params[i] = item
@@ -285,7 +294,8 @@ def applyTTHints(ttHintsList):
                 tth.commands.append(ttc)
 
         if readingError:
-            print '\tProblems with reading hinting recipe of glyph %s\n' % (gName)
+            print '\tProblems with reading hinting recipe of glyph %s\n' % (
+                gName)
 
         if len(tth.commands):
             tth.SaveProgram(glyph)
@@ -308,16 +318,17 @@ def run(parentDir):
         print 'Reading', tthintsFilePath
         ttHintsList = readTTHintsFile(tthintsFilePath)
     else:
-        print "Could not find the %s file at %s" % (kTTHintsFileName, tthintsFilePath)
+        print "Could not find the %s file at %s" % (
+            kTTHintsFileName, tthintsFilePath)
         return
 
     if len(ttHintsList):
         applyTTHints(ttHintsList)
         print "TT hints added."
     else:
-        print "The %s file at %s has no hinting data." % (kTTHintsFileName, tthintsFilePath)
+        print "The %s file at %s has no hinting data." % (
+            kTTHintsFileName, tthintsFilePath)
         return
-
 
 
 def preRun():

@@ -1,7 +1,10 @@
 #FLM: Output PPMs
 # coding: utf-8
 
-__copyright__ = __license__ =  """
+import os
+from FL import fl
+
+__copyright__ = __license__ = """
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -37,9 +40,6 @@ Versions:
 v1.0 - Mar 27 2015 - First public release.
 
 """
-
-import os
-from FL import fl
 
 kPPMsFileName = "ppms"
 

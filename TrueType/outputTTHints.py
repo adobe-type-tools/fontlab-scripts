@@ -1,6 +1,9 @@
 #FLM: Output TrueType Hints
 # coding: utf-8
 
+import os
+from FL import *
+
 __copyright__ = __license__ =  """
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
 
@@ -55,9 +58,6 @@ v1.1 - Mar 04 2015 – Change name to Output TrueType Hints to supersede
                      the old script of the same name.
 v1.0 - Nov 27 2013 - Initial release
 """
-
-import os
-from FL import *
 
 vAlignLinkTop = 1
 vAlignLinkBottom = 2
@@ -116,7 +116,7 @@ def processTTHintsFileData(ttHintsList):
     for item in ttHintsList:
         hintItems = item.split("\t")
 
-        if len(hintItems) not in [2,3]:
+        if len(hintItems) not in [2, 3]:
             print "\tERROR: This hint definition does not have the correct format\n\t%s" % item
             continue
 
@@ -128,28 +128,30 @@ def processTTHintsFileData(ttHintsList):
 
 
 def analyzePoint(glyph, nodeIndex):
-    '''Analyzes a given point for a given glyph.
-       In a normal case, this function returns a tuple of point index and point coordinates.
-       If the sidebearings have been hinted, this function returns a tuple containing the flag
-       for the appropriate sidebearing.
-
+    '''
+    Analyzes a given point for a given glyph.
+    In a normal case, this function returns a tuple of point index and point
+    coordinates. If the sidebearings have been hinted, this function returns
+    a tuple containing the flag for the appropriate sidebearing.
     '''
 
     point = glyph[nodeIndex]
-    try: point.type
+    try:
+        point.type
 
     except:
-        ''' This happens if left or right bottom point have been hinted.
-            In the hinting code, those points are stored as point indices
-            greater than the actual point count of the glyph.
-            Since those points cannot be grasped in the context of the outline,
-            flags are created:
+        '''
+        This happens if left or right bottom point have been hinted.
+        In the hinting code, those points are stored as point indices
+        greater than the actual point count of the glyph.
+        Since those points cannot be grasped in the context of the outline,
+        flags are created:
 
-            "BL" is bottom left
-            "BR" is bottom right.
+        "BL" is bottom left
+        "BR" is bottom right.
 
-            Those flags are written into the output file as strings with quotes,
-            so they can be parsed with eval() when reading the file later.
+        Those flags are written into the output file as strings with quotes,
+        so they can be parsed with eval() when reading the file later.
         '''
 
         if nodeIndex == len(glyph):
@@ -167,30 +169,31 @@ def analyzePoint(glyph, nodeIndex):
 
     if point.type == nOFF:
         gName = glyph.name
-        print "\tWARNING: Off-curve point %s hinted in glyph %s." % (point_coordinates, gName)
+        print "\tWARNING: Off-curve point %s hinted in glyph %s." % (
+            point_coordinates, gName)
 
     return nodeIndex, point_coordinates
 
 
 def collectInstructions(tth, glyph, coord_option):
-    ''' Parses tth commands (list of integers) and returns them formatted
-        for writing the data into an external text file.
+    '''
+    Parses tth commands (list of integers) and returns them formatted
+    for writing the data into an external text file.
 
+    tth data structure:
+    -------------------
 
-        tth data structure:
-        -------------------
+    alignment points:
+    [command code, point index, alignment]
 
-        alignment points:
-        [command code, point index, alignment]
+    single and double links:
+    [command code, point index 1, point index 2, stem ID, alignment]
 
-        single and double links:
-        [command code, point index 1, point index 2, stem ID, alignment]
+    interpolations:
+    [command code, point index 1, point index 2, point index 3, alignment]
 
-        interpolations:
-        [command code, point index 1, point index 2, point index 3, alignment]
-
-        deltas:
-        [command code, point index, offset, point range min, point range max]
+    deltas:
+    [command code, point index, offset, point range min, point range max]
     '''
 
     coord_commandsList = []
@@ -263,7 +266,8 @@ def collectInstructions(tth, glyph, coord_option):
 
 def processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option):
     # Iterate through all the glyphs instead of just the ones selected.
-    # This way the order of the items in the output file will be constant and predictable.
+    # This way the order of the items in the output file will be constant
+    # and predictable.
 
     allGlyphsHintList = ["# Glyph name\tTT hints\n"]
 
@@ -277,9 +281,11 @@ def processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option):
                 tth.LoadProgram()
 
                 if len(tth.commands):
-                    instructionsList = collectInstructions(tth, glyph, coord_option)
+                    instructionsList = collectInstructions(
+                        tth, glyph, coord_option)
                     if len(instructionsList):
-                        gHints = "%s\t%s\n" % (gName, ';'.join(instructionsList))
+                        gHints = "%s\t%s\n" % (
+                            gName, ';'.join(instructionsList))
                         allGlyphsHintList.append(gHints)
                 else:
                     print "WARNING: The glyph %s has no TrueType hints." % gName
@@ -295,14 +301,17 @@ def run(font, parentDir, coord_option):
     kTTHintsFileName = "tthints"
 
     tthintsFilePath = os.path.join(parentDir, kTTHintsFileName)
-    selectedGlyphs = [font[gIndex].name for gIndex in range(len(font)) if fl.Selected(gIndex)]
+    selectedGlyphs = [
+        font[gIndex].name for gIndex in range(len(font))
+        if fl.Selected(gIndex)]
 
     if not len(selectedGlyphs):
         print "Select the glyph(s) to process and try again."
         return
 
     if os.path.exists(tthintsFilePath):
-        print "WARNING: The %s file at %s will be modified." % (kTTHintsFileName, tthintsFilePath)
+        print "WARNING: The %s file at %s will be modified." % (
+            kTTHintsFileName, tthintsFilePath)
         ttHintsList = readTTHintsFile(tthintsFilePath)
         modFile = True
     else:
@@ -316,7 +325,8 @@ def run(font, parentDir, coord_option):
         storedGlyphs = []
         ttHintsDict = {}
 
-    allGlyphsHintList = processGlyphs(selectedGlyphs, storedGlyphs, ttHintsDict, coord_option)
+    allGlyphsHintList = processGlyphs(
+        selectedGlyphs, storedGlyphs, ttHintsDict, coord_option)
 
     if len(allGlyphsHintList) > 1:
         writeTTHintsFile(allGlyphsHintList, tthintsFilePath)

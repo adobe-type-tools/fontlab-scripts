@@ -1,7 +1,7 @@
 #FLM: TT Hints Duplicator
 # coding: utf-8
 
-__copyright__ = __license__ =  """
+__copyright__ = __license__ = """
 Copyright (c) 2015 Adobe Systems Incorporated. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -91,15 +91,17 @@ in this case, because it would create a new FL font.)'''
 fl.output = ''
 
 MAC = False
-PC  = False
+PC = False
 if sys.platform in ('mac', 'darwin'):
     MAC = True
 elif os.name == 'nt':
     PC = True
 
-'Adding the FDK Path to the env variable (on Mac only) so that command line tools can be called from FontLab'
+# Adding the FDK Path to the env variable (on Mac only)
+# so that command line tools can be called from FontLab
 if MAC:
-    fdkPathMac = os.sep.join((os.path.expanduser('~'), 'bin', 'FDK', 'tools', 'osx'))
+    fdkPathMac = os.sep.join(
+        (os.path.expanduser('~'), 'bin', 'FDK', 'tools', 'osx'))
     envPath = os.environ["PATH"]
     newPathString = envPath + ":" + fdkPathMac
     if fdkPathMac not in envPath:
@@ -140,19 +142,23 @@ kTTHintsFileName = "tthints"
 # -----------
 
 'Code for identifying segment intersection:'
+
+
 class Point:
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
 
-def ccw(A,B,C):
+
+def ccw(A, B, C):
     return (C.y-A.y)*(B.x-A.x) > (B.y-A.y)*(C.x-A.x)
+
 
 def segmentsIntersect(seg1, seg2):
     # http://www.bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
-    A,B = Point(seg1[0][0],seg1[0][1]), Point(seg1[1][0],seg1[1][1])
-    C,D = Point(seg2[0][0],seg2[0][1]), Point(seg2[1][0],seg2[1][1])
-    return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+    A, B = Point(seg1[0][0], seg1[0][1]), Point(seg1[1][0], seg1[1][1])
+    C, D = Point(seg2[0][0], seg2[0][1]), Point(seg2[1][0], seg2[1][1])
+    return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
 
 # -----------
 
@@ -171,15 +177,14 @@ def getGlyphOncurveCoords(glyph):
     for contourIndex in range(len(glyph)):
         contour = glyph[contourIndex]
         pointsList = []
-        testList = []
         for pt in contour.bPoints:
             pointsList.append(pt.anchor)
 
         if len(pointsList) > 2 and pointsList[0] == pointsList[-1]:
-            # Post-process the pointsList:
-            # Depending on the position of the start point, FL may store it
-            # at both position 0 and -1. If that happens, the final (dupliacted)
-            # point will be removed from the list.
+            # Post-process the pointsList: Depending on the position of the
+            # start point, FL may store it at both position 0 and -1.
+            # If that happens, the final (duplicate) point will be removed
+            # from the list.
             pointsList.pop()
 
         glyphCoordsDict[contourIndex] = pointsList
@@ -187,19 +192,22 @@ def getGlyphOncurveCoords(glyph):
 
 
 def getSegmentsList(ptDict1, ptDict2):
-    'Creates lists of individual segments and compares their length across glyphs.'
+    # Creates lists of individual segments and
+    # compares their length across glyphs.
     segmentsList = []
     for i in ptDict1.keys():
         for j in range(len(ptDict1[i])):
-            try: # If the contours are out of order, a "IndexError: list index out of range" may happen
-                segmentsList.append([ ptDict1[i][j], ptDict2[i][j] ])
+            try:
+                # If the contours are out of order, a
+                # "IndexError: list index out of range" may happen
+                segmentsList.append([ptDict1[i][j], ptDict2[i][j]])
             except:
-                return # contour mismatch found
+                return  # contour mismatch found
     return segmentsList
 
 
 def closeAllOpenedFonts():
-    for i in range(len(fl))[::-1]: # [::-1] reverses the list
+    for i in range(len(fl))[::-1]:  # [::-1] reverses the list
         fl.Close(i)
 
 
@@ -217,13 +225,13 @@ def getFolderPaths(path, templatePath):
         UFOpath = os.path.join(root, kUFOFileName)
         TTFpath = os.path.join(root, kTTFFileName)
 
-        if (os.path.exists(TTFpath)
-            and (os.path.exists(PFApath)
-                or os.path.exists(TXTpath)
-                or os.path.exists(UFOpath))):
-
-                    if root != templatePath:
-                        folderPathsList.append(root)
+        if (os.path.exists(TTFpath) and (
+            os.path.exists(PFApath) or
+            os.path.exists(TXTpath) or
+            os.path.exists(UFOpath))
+        ):
+            if root != templatePath:
+                folderPathsList.append(root)
 
     return folderPathsList
 
@@ -278,10 +286,12 @@ def collectT1nodeIndexes(gName, t1font):
 
     nodesDict = {}
 
-    if glyph.nodes: # Just making sure that there's an outline in there ...
+    # Just making sure that there's an outline in there ...
+    if glyph.nodes:
         for nodeIndex in range(len(glyph)):
-            if glyph.nodes[nodeIndex].type != nOFF: # Ignore off-curve nodes
-                nodeCoords = (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
+            if glyph.nodes[nodeIndex].type != nOFF:  # Ignore off-curve nodes
+                nodeCoords = (
+                    glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
                 if nodeCoords not in nodesDict:
                     nodesDict[nodeCoords] = nodeIndex
 
@@ -298,14 +308,17 @@ def collectTTnodeIndexes(gName, ttfont):
 
     nodesDict = {}
 
-    if glyph.nodes: # Just making sure that there's an outline in there...
+    # Just making sure that there's an outline in there...
+    if glyph.nodes:
         for nodeIndex in range(len(glyph)):
-            if glyph.nodes[nodeIndex].type != nOFF: # Ignore off-curve nodes
-                nodeCoords = (glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
+            if glyph.nodes[nodeIndex].type != nOFF:  # Ignore off-curve nodes
+                nodeCoords = (
+                    glyph.nodes[nodeIndex].x, glyph.nodes[nodeIndex].y)
                 if nodeCoords not in nodesDict:
                     nodesDict[nodeCoords] = nodeIndex
                 else:
-                    print "ERROR: Overlapping node found in glyph %s at %s." % (gName, nodeCoords)
+                    print "ERROR: Overlapping node found in glyph %s at %s." % (
+                        gName, nodeCoords)
 
     return nodesDict
 
@@ -326,8 +339,9 @@ def transformCommandList(glyph, raw_commandList):
 
     '''
 
-    # pointDict = {(point.x, point.y): pointIndex for pointIndex, point in enumerate(glyph.nodes)}
-    pointDict = dict(((point.x, point.y), pointIndex) for pointIndex, point in enumerate(glyph.nodes))
+    pointDict = dict(
+        ((point.x, point.y), pointIndex) for
+        pointIndex, point in enumerate(glyph.nodes))
 
     output = []
     for item in raw_commandList:
@@ -340,8 +354,9 @@ def transformCommandList(glyph, raw_commandList):
         elif isinstance(item, tuple):
             'point coordinates'
             pointIndex = pointDict.get(item, None)
-            if pointIndex == None:
-                print '\tERROR: point %s does not exist in glyph %s.' % (item, glyph.name)
+            if pointIndex is None:
+                print '\tERROR: point %s does not exist in glyph %s.' % (
+                    item, glyph.name)
             output.append(pointIndex)
         else:
             'other hinting data, integers'
@@ -355,13 +370,16 @@ def transformCommandList(glyph, raw_commandList):
 
 def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
     '''
-    Creates a dictionary from template font files and the template tthints file.
+    Creates a dictionary from template font files and
+    the template tthints file
 
-        keys:   glyph names for all hinted glyphs
-        values: a dictionary of point indexes as keys, and MyHintedNode instances as values.
-                MyHintedNode contains x, y, templateTTIndex, templateT1Index for a given point.
-
+    keys:   glyph names for all hinted glyphs
+    values: a dictionary of point indexes as keys, and `MyHintedNode` instances
+            as values.
+            `MyHintedNode` contains x, y, templateTTIndex, templateT1Index
+            for a given point.
     '''
+
     okToProcessTargetFonts = True
     outputDict = {}
     indexOnlyRawHintingDict = {}
@@ -376,10 +394,14 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
             print "ERROR: Glyph %s not found in TT font." % gName
             continue
 
-        # This dictionary is indexed by the combination of the coordinates of each node of the current glyph:
-        t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(gName, t1font)
+        # This dictionary is indexed by the combination of the coordinates
+        # of each node of the current glyph:
+        t1GlyphNodeIndexDict, t1GlyphNodesCount = collectT1nodeIndexes(
+            gName, t1font)
 
-        hintedNodesDict = {} # This dictionary is indexed by the node indexes of the template TT font
+        # This dictionary is indexed by the node indexes
+        # of the template TT font:
+        hintedNodesDict = {}
         gHintsString = rawHintingDict[gName]
         gHintsList = gHintsString.split(";")
         indexOnlyRawHintingList = []
@@ -390,26 +412,30 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
             commandList = transformCommandList(glyph, raw_commandList)
 
             if not commandList:
-                print "ERROR: Problems with reading recipe of glyph %s" % (gName)
+                print "ERROR: Problems with reading recipe of glyph %s" % (
+                    gName)
                 writeGlyphRecipe = False
                 break
 
             if len(commandList) < 3:
-                print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, commandString)
+                print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (
+                    gName, commandString)
                 writeGlyphRecipe = False
                 break
 
             if commandType in deltas:
-                print "INFO: Delta hints are not transferred. Skipping hint (%s) in %s ..." % (commandString, gName)
+                print "INFO: Delta hints are not transferred. Skipping hint (%s) in %s ..." % (
+                    commandString, gName)
             elif commandType in links:
                 nodes = commandList[1:3]
             elif commandType in alignments + interpolations:
                 nodes = commandList[1:-1]
             else:
-                print "WARNING: Hint type %d in glyph %s is not supported." % (commandType, gName)
+                print "WARNING: Hint type %d in glyph %s is not supported." % (
+                    commandType, gName)
                 continue
 
-            indexOnlyRawHintingList.append(','.join(map(str,commandList)))
+            indexOnlyRawHintingList.append(','.join(map(str, commandList)))
 
             for hintedNodeIndex in nodes:
                 targetGlyph = ttfont[gIndex]
@@ -418,10 +444,10 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
 
                 try:
                     node.type
-                    # This check makes sure that a referenced node index actually exist
-                    # in an outline. However, it also skips any glyphs with hinted
-                    # sidebearings, because those 'nodes' are represented as len(glyph),
-                    # and len(glyph)+1.
+                    # This check makes sure that a referenced node index
+                    # actually exists in an outline. However, it also skips
+                    # any glyphs with hinted sidebearings, because those
+                    # 'nodes' are represented as len(glyph) and len(glyph)+1.
 
                 except:
                     if hintedNodeIndex in sidebearingIndexes:
@@ -433,8 +459,10 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
                     continue
 
                 if node.type == nOFF:
-                    # Ignore off-curve nodes in TrueType, do not write glyph recipe to the output file
-                    print "Node #%d in glyph %s is off-curve. Skipping glyph ..." % (hintedNodeIndex, gName)
+                    # Ignore off-curve nodes in TrueType, do not
+                    # write glyph recipe to the output file
+                    print "Node #%d in glyph %s is off-curve. Skipping glyph ..." % (
+                        hintedNodeIndex, gName)
                     writeGlyphRecipe = False
                     break
 
@@ -442,11 +470,13 @@ def collectTemplateIndexes(ttfont, t1font, glyphList, rawHintingDict):
                     nodeCoords = (node.x, node.y)
                     if nodeCoords in t1GlyphNodeIndexDict:
                         t1NodeIndex = t1GlyphNodeIndexDict[nodeCoords]
-                        hintedNode = MyHintedNode(node.x, node.y, hintedNodeIndex, t1NodeIndex)
+                        hintedNode = MyHintedNode(
+                            node.x, node.y, hintedNodeIndex, t1NodeIndex)
                         if hintedNodeIndex not in hintedNodesDict:
                             hintedNodesDict[hintedNodeIndex] = hintedNode
                     else:
-                        print "ERROR in %s: Could not find an on-curve point at (%s) in the PS font." % (gName, ', '.join(map(str, nodeCoords)))
+                        print "ERROR in %s: Could not find an on-curve point at (%s) in the PS font." % (
+                            gName, ', '.join(map(str, nodeCoords)))
 
         if writeGlyphRecipe:
             outputDict[gName] = hintedNodesDict
@@ -468,18 +498,25 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
             print 'INFO: Major incompatibility (TTF vs CFF) in glyph %s.' % glyph.name
             return
 
-        if templateT1index != None:
+        if templateT1index is None:
             try:
-                targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+                targetT1nodeCoords = (
+                    glyph.nodes[templateT1index].x,
+                    glyph.nodes[templateT1index].y)
             except IndexError:
-                # Again, FontLab's fantastic ability to make a contour longer than it is, by re-inserting
-                # the first point a second time in position -1. In this case, the templateT1index is
-                # re-set to be the first point of the last contour, which makes no functional difference.
+                # Again, encountering FontLab's fantastic ability for making a
+                # contour longer than it is, by re-inserting the first point a
+                # second time in position -1. In this case, the templateT1index
+                # is re-set to be the first point of the last contour, which
+                # makes no functional difference.
                 if templateT1index == len(glyph):
                     numberOfCountours = glyph.GetContoursNumber()
-                    firstPointOfLastContour = glyph.GetContourBegin(numberOfCountours-1)
+                    firstPointOfLastContour = glyph.GetContourBegin(
+                        numberOfCountours-1)
                     templateT1index = firstPointOfLastContour
-                    targetT1nodeCoords = (glyph.nodes[templateT1index].x, glyph.nodes[templateT1index].y)
+                    targetT1nodeCoords = (
+                        glyph.nodes[templateT1index].x,
+                        glyph.nodes[templateT1index].y)
                 else:
                     print 'I give up.'
 
@@ -488,8 +525,9 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
                 newTTcoordsList.append(targetT1nodeCoords)
             else:
                 print "Could not find target node in %s." % glyph.name
-                # It is probably better to not write the remaning hinting recipe for a
-                # given glyph at all if one of its points is not found in the target TTF.
+                # It is probably better to not write the remaning hinting
+                # recipe for a given glyph at all if one of its points
+                # is not found in the target TTF.
                 return
 
     return newTTindexesList, newTTcoordsList
@@ -517,15 +555,18 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
             deleteTempPFA = True
             makePFAfromUFO(ufoFilePath, pfaFilePath)
         else:
-            print "ERROR: Could not find target %s/%s file. Skipping %s folder ..." % (kPFAFileName, kTXTFileName, targetFolderName)
+            print "ERROR: Could not find target %s/%s file. Skipping %s folder ..." % (
+                kPFAFileName, kTXTFileName, targetFolderName)
             continue
 
         ttfFilePath = os.path.join(targetFolderPath, kTTFFileName)
         if not os.path.exists(ttfFilePath):
-            print "ERROR: Could not find target %s file. Skipping %s folder ..." % (kTTFFileName, targetFolderName)
+            print "ERROR: Could not find target %s file. Skipping %s folder ..." % (
+                kTTFFileName, targetFolderName)
             continue
 
-        print "\nProcessing %s ... (%d/%d)" % (targetFolderName, fontIndex, totalFolders)
+        print "\nProcessing %s ... (%d/%d)" % (
+            targetFolderName, fontIndex, totalFolders)
         fontIndex += 1
 
         fl.Open(pfaFilePath)
@@ -535,7 +576,8 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
         targetTTfont = fl[fl.ifont]
 
         newTTHintsFileList = ["# Glyph name\tTT hints\tGlyph color\n"]
-        filteredGlyphList = [gName for gName in glyphList if gName in hintedNodeDict]
+        filteredGlyphList = [
+            gName for gName in glyphList if gName in hintedNodeDict]
 
         for gName in filteredGlyphList:
             gMark = None
@@ -547,11 +589,13 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
                 print "ERROR: Glyph %s not found in target PS font." % gName
                 continue
 
-            # Test outline compatibility between the two glyphs (template and target)
+            # Test outline compatibility between the two glyphs
+            # (template and target)
             templateT1RBglyph = templateT1RBfont[gName]
             targetT1RBglyph = targetT1RBfont[gName]
             if not templateT1RBglyph.isCompatible(targetT1RBglyph, False):
-                # (NOTE: This method doesn't catch the case in which node indexes have rotated)
+                # NOTE: This method doesn't catch the case in which node
+                # indexes have rotated
                 print "DEFINITELY NOT COMPATIBLE: %s. Skipping..." % gName
                 continue
 
@@ -559,7 +603,8 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
             # Create dictionaries of the coodinates of on-curve points:
             ptDict1 = getGlyphOncurveCoords(templateT1RBglyph)
             ptDict2 = getGlyphOncurveCoords(targetT1RBglyph)
-            # Define segments using the point coordinates from ptDict1 and ptDict2:
+            # Define segments using the point coordinates from
+            # ptDict1 and ptDict2:
             segmentsList = getSegmentsList(ptDict1, ptDict2)
 
             if not segmentsList:
@@ -567,18 +612,21 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
                 continue
 
             # Get all pair combinations of those segments:
-            segmentCombinationsList = list(itertools.combinations(segmentsList, 2))
+            segmentCombinationsList = list(
+                itertools.combinations(segmentsList, 2))
             # Iterate through the segment combinations and stop as soon
             # as an intersection between two segments is found:
             for combination in segmentCombinationsList:
                 seg1, seg2 = combination[0], combination[1]
                 if segmentsIntersect(seg1, seg2):
                     print "POSSIBLY NOT COMPATIBLE: %s. Please check ..." % gName
-                    gMark = 25 # orange
-                    break # one incompatibility was found; no need to report it more than once
+                    gMark = 25  # orange
+                    break
+                    # one incompatibility was found;
+                    # no need to report it more than once
 
-            # This dictionary is indexed by the combination of
-            # the coordinates of each node of the current glyph:
+            # This dictionary is indexed by the combination of the
+            # coordinates of each node of the current glyph:
             ttGlyphNodeIndexDict = collectTTnodeIndexes(gName, targetTTfont)
 
             newHintsList = []
@@ -595,8 +643,9 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
                     elif commandType in alignments:
                         nodes = [commandList[1]]
-                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        if convertedNodes != None:
+                        convertedNodes = getNewTTindexes(
+                            glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes is not None:
                             writeLine = True
                             targetNodeIndexList, targetNodeCoordsList = convertedNodes
                             hintParamsList = [commandList[-1]]
@@ -606,8 +655,9 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
                     elif commandType in links:
                         nodes = commandList[1:3]
-                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        if convertedNodes != None:
+                        convertedNodes = getNewTTindexes(
+                            glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes is not None:
                             writeLine = True
                             targetNodeIndexList, targetNodeCoordsList = convertedNodes
                             hintParamsList = commandList[3:]
@@ -617,8 +667,9 @@ def processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphL
 
                     elif commandType in interpolations:
                         nodes = commandList[1:-1]
-                        convertedNodes = getNewTTindexes(glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
-                        if convertedNodes != None:
+                        convertedNodes = getNewTTindexes(
+                            glyph, nodes, ttGlyphNodeIndexDict, hintedNodeDict)
+                        if convertedNodes is not None:
                             writeLine = True
                             targetNodeIndexList, targetNodeCoordsList = convertedNodes
                             hintParamsList = [commandList[-1]]
@@ -659,7 +710,7 @@ def makePFAfromTXT(txtFilePath, pfaFilePath):
     # Run type1 tool
     if MAC:
         pp = os.popen(command)
-        report = pp.read()
+        # report = pp.read()
         pp.close()
     if PC:
         pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
@@ -672,17 +723,19 @@ def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
     'Runs the `tx` command on a UFO file to generate a temporary PFA.'
 
     if glyphList:
-        command = 'tx -t1 -g %s "%s" > "%s"' % (','.join(glyphList), ufoFilePath, pfaFilePath)
+        command = 'tx -t1 -g %s "%s" > "%s"' % (
+            ','.join(glyphList), ufoFilePath, pfaFilePath)
     else:
         command = 'tx -t1 "%s" > "%s"' % (ufoFilePath, pfaFilePath)
 
         # The order of the quotes above is extremely important.
-        # Windows will understand "File with spaces" but not 'File with spaces'.
+        # Windows will understand "File with spaces"
+        # but not 'File with spaces'.
 
     # Run tx tool
     if MAC:
         pp = os.popen(command)
-        report = pp.read()
+        # report = pp.read()
         pp.close()
     if PC:
         pp = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
@@ -693,15 +746,18 @@ def makePFAfromUFO(ufoFilePath, pfaFilePath, glyphList=None):
 
 def run(writeCoordinates=False):
 
-    # Get the folder that contains the source hinting data, and source font files:
-    templateFolderPath = fl.GetPathName("Select directory that contains the 'tthints' template file...")
+    # Get the folder that contains the source hinting data,
+    # and source font files:
+    templateFolderPath = fl.GetPathName(
+        "Select directory that contains the 'tthints' template file...")
     if not templateFolderPath:
         'Cancel was clicked or ESC was pressed'
         return
 
     tthintsFilePath = os.path.join(templateFolderPath, kTTHintsFileName)
 
-    # Verify that the files tthints, font.pfa/ufo and font.ttf exist in the folder provided:
+    # Verify that the files tthints, font.pfa/ufo and font.ttf exist
+    # in the folder provided:
     if not os.path.exists(tthintsFilePath):
         print "ERROR: Could not find %s file." % kTTHintsFileName
         return
@@ -718,8 +774,8 @@ def run(writeCoordinates=False):
     elif os.path.exists(ufoFilePath):
         pass
     else:
-        print "ERROR: Could not find any of the following font files: %s, %s or %s." % \
-            (kPFAFileName, kTXTFileName, kUFOFileName)
+        print "ERROR: Could not find any of the following font files: %s, %s or %s." % (
+            kPFAFileName, kTXTFileName, kUFOFileName)
         return
 
     # Check if font.ttf exists in source folder:
@@ -736,8 +792,9 @@ def run(writeCoordinates=False):
 
     startTime = time.time()
 
-    # Create a list of glyphs that have been hinted so it can be used as a filter.
-    # The rawHintingDict contains a string of raw hinting data for each glyph:
+    # Create a list of glyphs that have been hinted so it can be
+    # used as a filter. The rawHintingDict contains a string of raw
+    # hinting data for each glyph:
     glyphList, rawHintingDict = readTTHintsFile(tthintsFilePath)
     folderPathsList = getFolderPaths(baseFolderPath, templateFolderPath)
 
@@ -766,11 +823,14 @@ def run(writeCoordinates=False):
             g = currentT1RBfont[gName]
             templateT1RBfont.insertGlyph(g)
 
-        hintedNodeDict, indexOnlyRawHintingDict, okToProcessTargetFonts = collectTemplateIndexes(templateTTfont, templateT1font, glyphList, rawHintingDict)
+        hintedNodeDict, indexOnlyRawHintingDict, okToProcessTargetFonts = collectTemplateIndexes(
+            templateTTfont, templateT1font, glyphList, rawHintingDict)
         closeAllOpenedFonts()
 
         if okToProcessTargetFonts:
-            processTargetFonts(folderPathsList, templateT1RBfont, hintedNodeDict, glyphList, indexOnlyRawHintingDict, writeCoordinates)
+            processTargetFonts(
+                folderPathsList, templateT1RBfont, hintedNodeDict,
+                glyphList, indexOnlyRawHintingDict, writeCoordinates)
         else:
             print "Can't process target fonts because of hinting errors found in template font."
 
@@ -787,7 +847,8 @@ def run(writeCoordinates=False):
     if (elapsedSeconds/60) < 1:
         print '\nCompleted in %.1f seconds.\n' % elapsedSeconds
     else:
-        print '\nCompleted in %s minutes and %s seconds.\n' % (elapsedSeconds/60, elapsedSeconds%60)
+        print '\nCompleted in %s minutes and %s seconds.\n' % (
+            elapsedSeconds/60, elapsedSeconds%60)
 
 
 if __name__ == "__main__":
