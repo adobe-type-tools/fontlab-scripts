@@ -212,11 +212,11 @@ def applyTTHints(ttHintsList):
         hintItems = line.split("\t")
 
         if len(hintItems) == 3:
-            'line contains glyph name, hint info and mark color'
+            # line contains glyph name, hint info and mark color
             pass
 
         elif len(hintItems) == 2:
-            'line does not contain mark color'
+            # line does not contain mark color
             hintItems.append(80)  # green
 
         else:
@@ -259,14 +259,16 @@ def applyTTHints(ttHintsList):
                 continue
 
             if len(commandList) < 3:
-                print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (gName, commandString)
+                print "ERROR: A hint definition for glyph %s does not have enough parameters: %s" % (
+                    gName, commandString)
                 continue
 
             # Create the TTHCommand
             try:
                 ttc = TTHCommand(commandType)
             except RuntimeError:
-                print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (gName, commandType, vAlignLinkTop, vFinDelta)
+                print "ERROR: A hint definition for glyph %s has an invalid command type: %s\n\t\tThe first value must be within the range %s-%s." % (
+                    gName, commandType, vAlignLinkTop, vFinDelta)
                 continue
 
             paramError = False
@@ -308,11 +310,14 @@ def applyTTHints(ttHintsList):
             print readError_msg
 
         if len(tth.commands):
-            tth.SaveProgram(glyph)
             if readingError:
-                glyph.mark = 12
+                glyph.mark = 1  # red
             else:
-                glyph.mark = int(gMark)
+                if glyph.name in fuzzyPoints.keys():
+                    glyph.mark = 30  # orange
+                else:
+                    glyph.mark = int(gMark)  # green
+            tth.SaveProgram(glyph)
             fl.UpdateGlyph(gIndex)
             glyphsHinted += 1
 
@@ -344,11 +349,14 @@ def run(parentDir):
             kTTHintsFileName, tthintsFilePath)
         return
 
-    if len(report):
+    if len(report) > 1:
         # Write the error report to a file, because FL's output
         # window is a bit too ephemeral.
         with open(reportFilePath, 'w') as rf:
             rf.write('\n'.join(report))
+    elif len(report) <= 1 and os.path.exists(reportFilePath):
+        os.remove(reportFilePath)
+    del report[:]
 
 
 def preRun():
