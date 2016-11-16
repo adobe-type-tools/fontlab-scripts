@@ -498,7 +498,7 @@ def getNewTTindexes(glyph, nodeIndexList, ttGlyphNodeIndexDict, rawHintingDict):
             print 'INFO: Major incompatibility (TTF vs CFF) in glyph %s.' % glyph.name
             return
 
-        if templateT1index is None:
+        if templateT1index is not None:
             try:
                 targetT1nodeCoords = (
                     glyph.nodes[templateT1index].x,
