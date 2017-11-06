@@ -1,46 +1,58 @@
 #FLM: Export FontLab class kerning to UFO
 
 import os
+from FL import *
 
-moduleFound = False
-defconFound = False
+module_found = False
+defcon_found = False
+
+modules_urls = {
+    'defcon': 'https://github.com/typesupply/defcon',
+    'ufoLib': 'https://github.com/unified-font-object/ufoLib',
+    'fontTools.misc.py23': 'https://github.com/fonttools/fonttools',
+    'kernExport': 'https://github.com/adobe-type-tools/python-modules',
+}
+
+
+def print_module_msg(err):
+    module_name = err.message.split()[-1]
+    print('%s was found.' % err)
+    print('Get it at %s' % modules_urls.get(module_name))
+
 
 try:
     import defcon
-    defconFound = True
+    defcon_found = True
 
-except ImportError:
-    url = 'https://github.com/typesupply/defcon/'
-    print '''
-    "Defcon" is required, but not installed.
-    Get it here: %s
-    ''' % url
+except ImportError as err:
+    print_module_msg(err)
+    print('')
 
-if defconFound:
+
+if defcon_found:
     try:
         import kernExport
-        moduleFound = True
+        module_found = True
 
-    except ImportError:
-        modulePath = os.path.join(fl.userpath, 'Macros', 'System', 'Modules')
-        url = 'https://github.com/adobe-type-tools/python-modules'
-        print '''
-    Please make sure you have placed the "kernExport.py" module in your Macros/System/Modules folder:
-    %s
-    Get the module here:
-    %s 
-        ''' % (modulePath, url)
+    except ImportError as err:
+        print_module_msg(err)
+        module_path = os.path.join(fl.userpath, 'Macros', 'System', 'Modules')
+        print("Then place kernExport.py file in FontLab's Modules folder at")
+        print("%s" % module_path)
+        print('')
 
 
 def run():
-    if moduleFound:
+    if module_found:
 
-        # three options are possible; for further details see kernExport.__doc__:
-        # kernExport.ClassKerningToUFO(fl.font, prefixOption = 'MM')   # prefix kerning classes in MetricsMachine-style
-        # kernExport.ClassKerningToUFO(fl.font, prefixOption = 'UFO3') # prefix kerning classes in UFO3-style
-        # kernExport.ClassKerningToUFO(fl.font)                        # do not change the name of kerning classes (apart from side markers)
+        # Three options are possible for kerning classes prefix:
+        # 'MM': MetricsMachine-style
+        # 'UFO3': UFO3-style
+        # None: don't change the name of kerning classes (apart from
+        #       the side markers)
+        # For further details see kernExport.__doc__
 
-        kernExport.ClassKerningToUFO(fl.font, 'MM')
+        kernExport.ClassKerningToUFO(fl.font, prefixOption='MM')
 
 
 if __name__ == '__main__':
